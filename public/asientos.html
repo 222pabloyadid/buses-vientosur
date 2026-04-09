@@ -189,7 +189,7 @@ fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
 
   });
 
-function pagar() {
+fetch("https://buses-vientosur.onrender.com/comprar", {
   const nota = document.getElementById("nota")?.value || "";
   console.log(nota); 
 
