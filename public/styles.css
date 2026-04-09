@@ -1,0 +1,101 @@
+/* BODY */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to bottom, #00c6ff, #0072ff);
+
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* CONTENEDOR */
+.container {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 30px;   
+    padding-top: 40px;  
+    padding-left: 25px;
+    padding-right: 25px;
+    padding-bottom: 25px;
+    background: transparent;
+    border-radius: 0;
+    flex: 1
+}
+
+/* TITULOS */
+h1 {
+    text-align: center;
+    font-size: 26px;
+    margin-bottom: 10px;
+}
+
+h2 {
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+/* CAMPOS */
+label {
+    display: block;
+    margin-top: 20px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* INPUTS MODERNOS */
+input, select {
+    width: 100%;
+    padding: 18px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+input[type="date"] {
+    width: 95%;
+}
+
+
+
+/* EFECTO AL PASAR */
+input:hover, select:hover {
+    transform: scale(1.01);
+}
+
+/* EFECTO AL TOCAR */
+input:focus, select:focus {
+    border: 2px solid #0072ff;
+    box-shadow: 0 0 10px rgba(0,114,255,0.4);
+    transform: scale(1.02);
+}
+
+/* BOTONES PRO */
+button {
+    width: 100%;
+    padding: 18px;
+    margin-top: 25px;
+    border: none;
+    border-radius: 12px;
+    background: #0072ff;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* EFECTO CLICK */
+button:active {
+    transform: scale(0.97);
+}
+.logo {
+    display: block;
+    margin: 90px auto 80px auto;
+    width: 400px;
+}
