@@ -228,7 +228,7 @@ app.post("/pagar", async (req, res) => {
       title: "Pasaje Buses VientoSur",
       quantity: 1,
       currency_id: "CLP",
-      unit_price: Number(precio),
+      unit_price: 1000,
     },
   ],
 
