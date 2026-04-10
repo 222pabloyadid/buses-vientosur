@@ -191,28 +191,27 @@ fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
 
 function pagar() {
   const nota = document.getElementById("nota")?.value || "";
-  console.log(nota); 
+  console.log(nota);
 
   if (!asientoSeleccionado) {
     alert("Selecciona un asiento");
     return;
   }
 
-  fetch("/pagar", {
+  fetch("https://buses-vientosur.onrender.com/pagar", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-    nombre:"pasajero",
-    precio: 5000
+      nombre: "pasajero",
+      precio: 5000
     })
   })
   .then(res => res.json())
-  .then(data => {    
-     window.location.href = data.init_point;
-
-   });
+  .then(data => {
+    window.location.href = data.init_point;
+  });
 }  
 
 </script>
