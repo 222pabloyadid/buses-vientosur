@@ -241,9 +241,9 @@ app.post("/pagar", async (req, res) => {
   },
 
   back_urls: {
-    success: "http://192.168.1.2:3000/exito",
-    failure: "http://192.168.1.2:3000/error",
-    pending: "http://192.168.1.2:3000/pendiente",
+    success: "https://buses-vientosur.onrender.com/success",
+    failure: "https://buses-vientosur.onrender.com/fallo",
+    pending: "https://buses-vientosur.onrender.com/pending",
   },
 
   auto_return: "approved",
@@ -252,7 +252,7 @@ app.post("/pagar", async (req, res) => {
     const preferenceClient = new Preference(client);
     const response = await preferenceClient.create({ body: preference });
 
-    res.json({ id: response.id });
+    res.json({ init_point: response.init_point });
   } catch (error) {
     console.error(error);
     res.status(500).send("Error en pago");
