@@ -248,7 +248,7 @@ app.post("/pagar", async (req, res) => {
     const preferenceClient = new Preference(client);
     const response = await preferenceClient.create({ body: preference });
 
-    res.json({ id: response.id });
+    res.json({ init_point: response.init_point });
   } catch (error) {
     console.error(error);
     res.status(500).send("Error en pago");
@@ -264,7 +264,7 @@ app.get('/bus', (req, res) => {
         v.fecha === fecha && v.hora === hora
     );
 
-    res.json({ init_point: response.init_point });
+    res.json(filtrados);
 });
 
   
