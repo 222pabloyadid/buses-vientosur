@@ -272,25 +272,45 @@ app.get('/bus', (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-  try {
-    const data = req.body;
+    try {
+        const data = req.body;
 
-    console.log("WEBHOOK RECIBIDO:", data);
+        console.log("WEBHOOK RECIBIDO:", data);
 
-    // Solo procesar pagos
-    if (data.type === "payment") {
+        // Solo procesar pagos
+        if (data.type === "payment") {
+            console.log("PAGO DETECTADO");
 
-      console.log("PAGO DETECTADO");
+            const paymentId = data.data.id;
 
-      // Aquí después vamos a validar el estado real
+            const nuevaVenta = {
+                asiento: Math.floor(Math.random() * 40) + 1,
+                fecha: "2026-04-10",
+                hora: "10:00",
+                nombre: "Cliente Web",
+                pago_id: paymentId
+            };
+
+            let ventas = [];
+            try {
+                ventas = JSON.parse(fs.readFileSync('ventas.json', 'utf8'));
+            } catch (e) {
+                ventas = [];
+            }
+
+            ventas.push(nuevaVenta);
+
+            fs.writeFileSync('ventas.json', JSON.stringify(ventas, null, 2));
+
+            console.log("VENTA GUARDADA:", nuevaVenta);
+        }
+
+        res.sendStatus(200);
+
+    } catch (error) {
+        console.log("ERROR WEBHOOK:", error);
+        res.sendStatus(500);
     }
-
-    res.sendStatus(200);
-
-  } catch (error) {
-    console.log("ERROR WEBHOOK:", error);
-    res.sendStatus(500);
-  }
 });
   
 // 🚀 INICIAR SERVIDOR
