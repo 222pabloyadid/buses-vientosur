@@ -278,7 +278,7 @@ app.post("/webhook", async (req, res) => {
         console.log("WEBHOOK RECIBIDO:", data);
 
         // Solo procesar pagos
-        if (data.type === "payment") {
+        if (data.type === "payment" || data.action === "payment.created") {
             console.log("PAGO DETECTADO");
 
             const paymentId = data.data.id;
