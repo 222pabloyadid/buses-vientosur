@@ -4,6 +4,7 @@ console.log("API KEY:", process.env.RESEND_API_KEY);
 const express = require("express");
 const fs = require('fs');
 const { Resend } = require("resend");
+const { crearPago } = require("./mercadopago");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
@@ -13,11 +14,7 @@ app.use(express.json());
 app.post("/comprar", (req, res) => {
   res.json({ ok: true });
 });
-const { MercadoPagoConfig, Preference } = require("mercadopago");
 
-const client = new MercadoPagoConfig({
-  accessToken: "APP_USR-2721588281881648-040100-0789203df06a5beb26d5bb2bb90cab4d-51866980"
-});
 app.use(express.static("public"));
 app.use(express.static(__dirname));
 
@@ -226,33 +223,9 @@ app.post("/pagar", async (req, res) => {
   try {
     const { nombre, precio } = req.body;
 
-    const preference = {
-  items: [
-    {
-      title: "Pasaje Buses VientoSur",
-      quantity: 1,
-      currency_id: "CLP",
-      unit_price: Number(precio),
-    },
-  ],
-
-  payer: {
-    name: nombre,
-  },
-
-  back_urls: {
-    success: "https://buses-vientosur.onrender.com/success",
-    failure: "https://buses-vientosur.onrender.com/fallo",
-    pending: "https://buses-vientosur.onrender.com/pending",
-  },
-
-  auto_return: "approved",
-};
-
-    const preferenceClient = new Preference(client);
-    const response = await preferenceClient.create({ body: preference });
-
-    res.json({ init_point: response.init_point });
+    const url = await crearPago(nombre, precio);
+    res.json({ init_point: url });
+   
   } catch (error) {
     console.error(error);
     res.status(500).send("Error en pago");
