@@ -197,7 +197,7 @@ function pagar() {
     return;
   }
 
-  let precio = localStorage.getItem("precio");
+  let precio = 1000;
 
   fetch("https://buses-vientosur.onrender.com/pagar", {
     method: "POST",
