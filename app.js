@@ -270,6 +270,19 @@ app.get('/bus', (req, res) => {
     res.json(filtrados);
 });
 
+app.post("/webhook", async (req, res) => {
+  try {
+    const data = req.body;
+
+    console.log("WEBHOOK RECIBIDO:", data);
+
+    res.sendStatus(200);
+
+  } catch (error) {
+    console.log("ERROR WEBHOOK:", error);
+    res.sendStatus(500);
+  }
+});
   
 // 🚀 INICIAR SERVIDOR
 app.listen(3000, () => {
