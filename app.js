@@ -237,9 +237,9 @@ app.post("/pagar", async (req, res) => {
   },
 
   back_urls: {
-    success: "http://192.168.1.2:3000/exito",
-    failure: "http://192.168.1.2:3000/error",
-    pending: "http://192.168.1.2:3000/pendiente",
+    success: "https://buses-vientosur.onrender.com/exito",
+    failure: "https://buses-vientosur.onrender.com/error",
+    pending: "https://buses-vientosur.onrender.com/pendiente",
   },
 
   auto_return: "approved",
