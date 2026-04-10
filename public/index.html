@@ -115,6 +115,7 @@ async function buscar() {
   // Obtener precio
   const resPrecio = await fetch('/tarifa?origen=' + origen + '&destino=' + destino);
   const dataPrecio = await resPrecio.json();
+  window.precioSeleccionado = dataPrecio.precio;
 
   const contenedor = document.getElementById("resultado");
 
@@ -193,12 +194,13 @@ function irAAsientos() {
     const origen = document.getElementById("origen").value;
     const destino = document.getElementById("destino").value;
 
-    window.location.href = '/asientos.html?origen=' + origen +
-    '&destino=' + destino +
-    '&fecha=' + fecha +
-    '&hora=' + window.horarioSeleccionado +
-    '&nombre=' + nombre +
-    '&correo=' + correo;
+    window.location.href = "/asientos.html?origen=" + origen +
+    "&destino=" + destino +
+    "&fecha=" + fecha +
+    "&hora=" + window.horarioSeleccionado +
+    "&nombre=" + nombre +
+    "&correo=" + correo +
+    "&precio=" + window.precioSeleccionado;
 }
 
 </script>

@@ -1,19 +1,17 @@
-require('dotenv').config();
-console.log("API KEY:", process.env.RESEND_API_KEY);
+
 
 const express = require("express");
 const fs = require('fs');
 const { Resend } = require("resend");
-const { crearPago } = require("./mercadopago");
 const resend = new Resend(process.env.RESEND_API_KEY);
+const mercadopago = require("mercadopago");
+
+mercadopago.configure({
+  access_token: "APP_USR-2721588281881648-040100-0789203df06a5beb26d5bb2bb90cab4d-51866980"
+});
 
 const app = express();
 app.use(express.json());
-
-// 🔥 TEST
-app.post("/comprar", (req, res) => {
-  res.json({ ok: true });
-});
 
 app.use(express.static("public"));
 app.use(express.static(__dirname));
@@ -25,8 +23,6 @@ const estudiantes = require("./data/estudiantes");
 const bloqueados = require("./bloqueos.js");
 const filtrarPorTiempo = require("./filtroTiempo.js");
 const { guardarVenta, obtenerAsientosOcupados } = require("./ventas.js");
-// CONFIG
-app.use(express.json());
 
 
 
@@ -221,13 +217,37 @@ app.get("/admin/bloquear", (req, res) => {
 
 app.post("/pagar", async (req, res) => {
   try {
-    const { nombre, precio } = req.body;
+    const { nombre, precio, fecha, hora, asiento } = req.body;
 
-    const url = await crearPago(nombre, precio);
-    res.json({ init_point: url });
+    if (!precio || !fecha || !hora || !asiento) {
+      return res.status(400).json({ error: "Faltan datos" });
+    }
+
+    const preference = {
+      items: [
+        {
+          title:`Pasaje ${nombre || "Pasajero"} - Asiento ${asiento}`,
+          unit_price: Number(precio),
+          quantity: 1,
+          currency_id: "CLP"
+        }
+      ],
+      back_urls: {
+        success:`https://buses-vientosur.onrender.com/exito.html?fecha=${fecha}&hora=${hora}&asiento=${asiento}`,
+        failure: "https://buses-vientosur.onrender.com/error.html",
+        pending: "https://buses-vientosur.onrender.com/pendiente.html"
+      },
+      auto_return: "approved"
+    };
+
+    const response = await mercadopago.preferences.create(preference);
+
+    res.json({
+      init_point: response.body.init_point
+    });
 
   } catch (error) {
-    console.error("ERROR REAL:", error);
+    console.log("ERROR PAGO:", error);
     res.status(500).json({ error: "Error en pago" });
   }
 });
