@@ -133,6 +133,10 @@ const fecha = params.get("fecha");
 const hora = params.get("hora");
 const precio = params.get("precio");
 
+
+
+
+
 document.getElementById("viaje").innerText =
 `Viaje desde ${origen} hacia ${destino}
 Pasajero: ${nombre}
@@ -149,7 +153,7 @@ const bus = document.getElementById("bus");
 
 // 🔹 crear asientos
 
-fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
+fetch(`/bus?fecha=${fecha}&hora=${hora}`)
   .then(res => res.json())
   .then(data => {
 
@@ -168,8 +172,11 @@ fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
       asiento.classList.add("asiento");
       asiento.innerText = a.numero;
 
-      if (a.ocupado) {
-        asiento.classList.add("ocupado");
+      if (data.some(v => v.asiento == a.numero)) {
+          asiento.classList.add("ocupado");
+          asiento.style.pointerEvents = "none";
+      }
+        
       } else {
         asiento.onclick = () => {
           document.querySelectorAll(".asiento").forEach(el =>
