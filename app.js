@@ -225,10 +225,10 @@ app.post("/pagar", async (req, res) => {
 
     const url = await crearPago(nombre, precio);
     res.json({ init_point: url });
-   
+
   } catch (error) {
-    console.error(error);
-    res.status(500).send("Error en pago");
+    console.error("ERROR REAL:", error);
+    res.status(500).json({ error: "Error en pago" });
   }
 });
 
