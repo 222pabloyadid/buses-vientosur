@@ -198,21 +198,21 @@ function pagar() {
     return;
   }
 
-  fetch("/comprar", {
+  fetch("/pagar", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-    fecha: fecha,
-    hora: hora,
-    asiento: asientoSeleccionado
+    nombre:"pasajero",
+    precio: 5000
     })
   })
   .then(res => res.json())
-  .then(data => {
-    window.location.href = "https://www.mercadopago.cl/checkout/v1/redirect?pref_id=" + data.id;
-  });
+  .then(data => {    
+     window.location.href = data.init_point;
+
+   });
 }  
 
 </script>
