@@ -233,6 +233,7 @@ app.post("/pagar", async (req, res) => {
           currency_id: "CLP"
         }
       ],
+      notification_url: "https://buses-vientosur.onrender.com/webhook",
       back_urls: {
         success:`https://buses-vientosur.onrender.com/exito.html?fecha=${fecha}&hora=${hora}&asiento=${asiento}`,
         failure: "https://buses-vientosur.onrender.com/error.html",
