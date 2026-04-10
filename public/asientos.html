@@ -190,39 +190,43 @@ fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
   });
 
 function pagar() {
-    const nota = document.getElementById("nota")?.value || "";
+  const nota = document.getElementById("nota")?.value || "";
 
-    if (!asientoSeleccionado) {
-        alert("Selecciona un asiento");
-        return;
+  if (!asientoSeleccionado) {
+    alert("Selecciona un asiento");
+    return;
+  }
+
+  let precio = localStorage.getItem("precio");
+
+  fetch("https://buses-vientosur.onrender.com/pagar", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      nombre: "Cliente",
+      precio: Number(precio),
+      fecha: fecha,
+      hora: hora,
+      asiento: asientoSeleccionado
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("Respuesta backend:", data);
+
+    if (data.init_point) {
+      window.location.href = data.init_point;
+    } else {
+      alert("Error: no se recibió link de pago");
     }
-
-    fetch("/comprar", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            fecha: fecha,
-            hora: hora,
-            asiento: asientoSeleccionado
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        console.log("Respuesta backend:", data);
-
-        if (data.init_point) {
-            window.location.href = data.init_point;
-        } else {
-            alert("Error: no se recibió link de pago");
-        }
-    })
-    .catch(err => {
-        console.error("Error:", err);
-        alert("Error al conectar con el servidor");
-    });
-}  
+  })
+  .catch(err => {
+    console.error("Error:", err);
+    alert("Error al conectar con el servidor");
+  });
+}
 
 </script>
 

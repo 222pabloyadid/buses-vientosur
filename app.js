@@ -9,10 +9,6 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 app.use(express.json());
 
-// 🔥 TEST
-app.post("/comprar", (req, res) => {
-  res.json({ ok: true });
-});
 const { MercadoPagoConfig, Preference } = require("mercadopago");
 
 const client = new MercadoPagoConfig({
@@ -268,7 +264,7 @@ app.get('/bus', (req, res) => {
         v.fecha === fecha && v.hora === hora
     );
 
-    res.json(filtrados);
+    res.json({ init_point: response.init_point });
 });
 
   
