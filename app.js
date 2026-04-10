@@ -4,10 +4,11 @@ const express = require("express");
 const fs = require('fs');
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
-const mercadopago = require("mercadopago");
+const { MercadoPagoConfig, Preference } = require("mercadopago");
 
-mercadopago.configure({
-  access_token: "APP_USR-2721588281881648-040100-0789203df06a5beb26d5bb2bb90cab4d-51866980"
+
+const client = new MercadoPagoConfig({
+  accessToken: "APP_USR-2721588281881648-040100-0789203df06a5beb26d5bb2bb90cab4d-51866980"
 });
 
 const app = express();
@@ -240,10 +241,15 @@ app.post("/pagar", async (req, res) => {
       auto_return: "approved"
     };
 
-    const response = await mercadopago.preferences.create(preference);
+    const preferenceClient = new Preference(client);
+
+    const response = await preferenceClient.create({
+      body: preference
+    });
+
 
     res.json({
-      init_point: response.body.init_point
+      init_point: response.init_point
     });
 
   } catch (error) {

@@ -189,42 +189,30 @@ fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
 
   });
 
-app.post("/pagar", async (req, res) => {
-  try {
-    const { nombre, precio, fecha, hora, asiento } = req.body;
-
-    if (!precio || !fecha || !hora || !asiento) {
-      return res.status(400).json({ error: "Faltan datos" });
-    }
-
-    const preference = {
-      items: [
-        {
-          title: Pasaje ${nombre || "Pasajero"} - Asiento ${asiento},
-          unit_price: Number(precio),
-          quantity: 1,
-          currency_id: "CLP"
-        }
-      ],
-      back_urls: {
-        success: https://buses-vientosur.onrender.com/exito.html?fecha=${fecha}&hora=${hora}&asiento=${asiento},
-        failure: "https://buses-vientosur.onrender.com/error.html",
-        pending: "https://buses-vientosur.onrender.com/pendiente.html"
-      },
-      auto_return: "approved"
-    };
-
-    const response = await mercadopago.preferences.create(preference);
-
-    res.json({
-      init_point: response.body.init_point
-    });
-
-  } catch (error) {
-    console.log("ERROR PAGO:", error);
-    res.status(500).json({ error: "Error en pago" });
+function pagar() {
+  if (!asientoSeleccionado) {
+    alert("Selecciona un asiento");
+    return;
   }
-});  
+
+  fetch("https://buses-vientosur.onrender.com/pagar", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      nombre: nombre,
+      precio: precio,
+      fecha: fecha,
+      hora: hora,
+      asiento: asientoSeleccionado
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    window.location.href = data.init_point;
+  });
+}  
 
 </script>
 
