@@ -276,6 +276,14 @@ app.post("/webhook", async (req, res) => {
 
     console.log("WEBHOOK RECIBIDO:", data);
 
+    // Solo procesar pagos
+    if (data.type === "payment") {
+
+      console.log("PAGO DETECTADO");
+
+      // Aquí después vamos a validar el estado real
+    }
+
     res.sendStatus(200);
 
   } catch (error) {
