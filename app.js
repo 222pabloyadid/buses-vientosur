@@ -265,7 +265,7 @@ app.get('/bus', (req, res) => {
     const ventas = JSON.parse(fs.readFileSync('ventas.json', 'utf8'));
 
     const filtrados = ventas.filter(v => 
-        v.fecha === fecha && v.hora === hora
+      v.fecha == fecha && v.hora.substring(0,5) == hora.substring(0,5)
     );
 
     res.json(filtrados);
@@ -278,7 +278,7 @@ app.post("/webhook", async (req, res) => {
         console.log("WEBHOOK RECIBIDO:", data);
 
         // Solo procesar pagos
-        if (data.data && data.data.id) {
+        if (data.type === "payment" || data.action === "payment.created") {
             console.log("PAGO DETECTADO");
 
             const paymentId = data.data.id;
