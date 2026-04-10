@@ -151,9 +151,15 @@ let asientoSeleccionado = null;
 
 const bus = document.getElementById("bus");
 
-// 🔹 crear asientos
+let ocupados = [];
 
-fetch(`/bus?fecha=${fecha}&hora=${hora}`)
+fetch(/bus?fecha=${fecha}&hora=${hora})
+  .then(res => res.json())
+  .then(data => {
+    ocupados = data;
+  });
+
+fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
   .then(res => res.json())
   .then(data => {
 
@@ -172,7 +178,7 @@ fetch(`/bus?fecha=${fecha}&hora=${hora}`)
       asiento.classList.add("asiento");
       asiento.innerText = a.numero;
 
-      if (data.some(v => v.asiento == a.numero)) {
+      if (ocupados.some(v => v.asiento == a.numero))
           asiento.classList.add("ocupado");
           asiento.style.pointerEvents = "none";
       }
