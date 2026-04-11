@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Panel Buses</title>
+
+<style>
+body {
+    font-family: Arial;
+    padding: 20px;
+    background: #0b3d91;
+    color: white;
+}
+
+h2 {
+    text-align: center;
+}
+
+input, button {
+    padding: 10px;
+    margin: 5px 0;
+    width: 100%;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    background: #00c2ff;
+    color: white;
+    font-weight: bold;
+}
+
+#resultado {
+    background: white;
+    color: black;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+    white-space: pre-line;
+}
+</style>
+
+</head>
+<body>
+
+<h2>🚌 Panel de Buses</h2>
+
+<label>Fecha:</label>
+<input type="date" id="fecha">
+
+<label>Hora:</label>
+<input type="time" id="hora">
+
+<button onclick="verBus()">Ver pasajeros</button>
+<button onclick="enviarWhatsApp()">Enviar por WhatsApp</button>
+
+<div id="resultado"></div>
+
+<script>
+
+let ultimoTexto = "";
+
+function verBus() {
+    const fecha = document.getElementById("fecha").value;
+    const hora = document.getElementById("hora").value;
+
+    fetch("/bus?fecha=" + fecha + "&hora=" + hora)
+    .then(res => res.json())
+    .then(data => {
+
+        if (data.length === 0) {
+            document.getElementById("resultado").innerText = "No hay pasajeros";
+            return;
+        }
+
+        let texto = "🚌 BUS " + hora + "\n";
+        texto += "Fecha: " + fecha + "\n";
+        texto += "Total pasajeros: " + data.length + "\n\n";
+
+        data.forEach(p => {
+            texto += "Asiento " + p.asiento + " - " + (p.nombre || "Sin nombre") + "\n";
+        });
+
+        ultimoTexto = texto;
+        document.getElementById("resultado").innerText = texto;
+
+    });
+}
+
+function enviarWhatsApp() {
+    if (!ultimoTexto) {
+        alert("Primero busca un bus");
+        return;
+    }
+
+    const url = "https://wa.me/?text=" + encodeURIComponent(ultimoTexto);
+    window.open(url, "_blank");
+}
+
+</script>
+
+</body>
+</html>

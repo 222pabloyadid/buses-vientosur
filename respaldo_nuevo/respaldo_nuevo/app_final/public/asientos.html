@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Asientos</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #f4f4f4;
+}
+
+/* contenedor general */
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* caja principal */
+.lado-izq {
+  background: #e6f2ff;
+  padding: 30px;
+  border-radius: 10px;
+  width: 600px;
+  text-align: center;
+}
+
+/* título */
+h2 {
+  margin-bottom: 5px;
+}
+
+/* bus */
+.bus {
+  display: grid;
+  grid-template-columns: 80px 80px 40px 80px 80px;
+  gap: 15px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+/* asientos */
+.asiento {
+  width: 80px;
+  height: 80px;
+  background: #caa64b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* ocupado */
+.ocupado {
+  background: red;
+  color: white;
+  cursor: not-allowed;
+}
+
+/* seleccionado */
+.seleccionado {
+  background: green;
+  color: white;
+}
+
+/* botón */
+.btn {
+  margin-top: 15px;
+  width: 100%;
+  padding: 15px;
+  background: #d88c2d;
+  border: none;
+  color: white;
+  font-size: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+</style>
+
+  
+
+</head>
+
+<body style="background:#cfe8ff;">
+
+<div class="container">
+
+  <div class="lado-izq">
+
+    <h2>Selecciona tu asiento</h2>
+    <p id="viaje"></p>
+
+    <div class="bus" id="bus"></div>
+
+    <div class="info">
+      <p id="infoAsiento">Selecciona un asiento</p>
+    </div>
+    
+    <p style="margin-top:10px; font-weight:bold;">
+      Observaciones (opcional)
+    </p>
+
+    <input 
+      type="text" 
+      id="nota" 
+      placeholder="Ej: equipaje, referencia, etc"
+      style="width:100%; padding:10px;"
+    > 
+
+    <button class="btn" onclick="pagar()">PAGAR</button>
+
+  </div>
+
+  <div class="lado-der"></div>
+
+</div>
+
+<script>
+
+// 🔹 obtener parámetros de la URL
+
+const params = new URLSearchParams(window.location.search);
+const origen = params.get("origen");
+const destino = params.get("destino");
+const nombre = params.get("nombre");
+const correo = params.get("correo");
+const fecha = params.get("fecha");
+const hora = params.get("hora");
+
+
+document.getElementById("viaje").innerText =
+`Viaje desde ${origen} hacia ${destino}
+Pasajero: ${nombre}
+Correo: ${correo}
+Fecha: ${fecha}
+Hora: ${hora}`;
+
+// 🔹 asientos ocupados (ejemplo)
+
+
+let asientoSeleccionado = null;
+
+const bus = document.getElementById("bus");
+
+// 🔹 crear asientos
+
+fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
+  .then(res => res.json())
+  .then(data => {
+
+    const bus = document.getElementById("bus");
+    bus.innerHTML = "";
+
+    data.forEach((a, index) => {
+
+      // pasillo
+      if ((index) % 4 === 2) {
+        const pasillo = document.createElement("div");
+        bus.appendChild(pasillo);
+      }
+
+      const asiento = document.createElement("div");
+      asiento.classList.add("asiento");
+      asiento.innerText = a.numero;
+
+      if (a.ocupado) {
+        asiento.classList.add("ocupado");
+      } else {
+        asiento.onclick = () => {
+          document.querySelectorAll(".asiento").forEach(el =>
+            el.classList.remove("seleccionado")
+          );
+
+          asiento.classList.add("seleccionado");
+          asientoSeleccionado = a.numero;
+
+          document.getElementById("infoAsiento").innerText =
+            "Asiento " + a.numero;
+        };
+      }
+
+      bus.appendChild(asiento);
+    });
+
+  });
+
+function pagar() {
+  const nota = document.getElementById("nota")?.value || "";
+
+  if (!asientoSeleccionado) {
+    alert("Selecciona un asiento");
+    return;
+  }
+
+  let precio = 1000;
+
+  fetch("https://buses-vientosur.onrender.com/pagar", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      nombre: "Cliente",
+      precio: Number(precio),
+      fecha: fecha,
+      hora: hora,
+      asiento: asientoSeleccionado
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("Respuesta backend:", data);
+
+    if (data.init_point) {
+      window.location.href = data.init_point;
+    } else {
+      alert("Error: no se recibió link de pago");
+    }
+  })
+  .catch(err => {
+    console.error("Error:", err);
+    alert("Error al conectar con el servidor");
+  });
+}
+
+</script>
+
+</body>
+</html>

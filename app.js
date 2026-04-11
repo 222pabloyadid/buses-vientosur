@@ -155,9 +155,9 @@ app.get("/tarifa", (req, res) => {
 
 
 // 🪑 ASIENTOS (29)
-app.get("/asientos", (req, res) => {
+app.get("/asientos", async (req, res) => {
 const { fecha, hora } = req.query;
-const ocupados = obtenerAsientosOcupados(fecha, hora);
+const ocupados = await obtenerAsientosOcupados(fecha, hora);
 
 console.log("OCUPADOS:", ocupados);
 
@@ -354,3 +354,19 @@ app.post("/webhook", async (req, res) => {
 app.listen(3000, () => {
   console.log("Servidor corriendo en http://localhost:3000");
 });
+async function obtenerAsientosOcupados(fecha, hora) {
+  try {
+    const response = await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
+    const data = await response.json();
+
+    const ocupados = data
+      .filter(v => v.fecha === fecha && v.hora === hora)
+      .map(v => Number(v.asiento));
+
+    return ocupados;
+
+  } catch (error) {
+    console.error("Error leyendo Sheets:", error);
+    return [];
+  }
+}

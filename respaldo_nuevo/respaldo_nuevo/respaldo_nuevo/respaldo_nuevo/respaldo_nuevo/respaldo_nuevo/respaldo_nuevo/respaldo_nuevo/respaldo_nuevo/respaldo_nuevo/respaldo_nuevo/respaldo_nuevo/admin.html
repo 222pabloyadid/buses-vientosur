@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Panel Admin</title>
+</head>
+<body>
+
+<h2>Panel de Bloqueo</h2>
+
+<button onclick="bloquear('12:00')">Bloquear 12:00</button>
+<button onclick="bloquear('13:00')">Bloquear 13:00</button>
+
+<script>
+function bloquear(hora) {
+  fetch(/admin/bloquear?hora=${hora}&key=1234)
+    .then(res => res.json())
+    .then(data => {
+      alert("Bloqueado: " + hora);
+      console.log(data);
+    });
+}
+</script>
+
+</body>
+</html>
