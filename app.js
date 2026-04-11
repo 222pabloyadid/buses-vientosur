@@ -362,7 +362,7 @@ app.post("/webhook", async (req, res) => {
 
             ventas.push(nuevaVenta);
 
-            fs.writeFileSync('ventas.json', JSON.stringify(ventas, null, 2));
+           // fs.writeFileSync('ventas.json', JSON.stringify(ventas, null, 2));
 
             console.log("VENTA GUARDADA:", nuevaVenta);
         }
