@@ -198,6 +198,9 @@ function pagar() {
     return;
   }
 
+  const params = new URLSearchParams(window.location.search);
+  const nombre = params.get("nombre");
+
   fetch("https://buses-vientosur.onrender.com/pagar", {
     method: "POST",
     headers: {
