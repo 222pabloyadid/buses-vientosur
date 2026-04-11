@@ -227,7 +227,7 @@ app.get("/admin/bloquear", (req, res) => {
 
 app.post("/pagar", async (req, res) => {
   try {
-    const { nombre, precio, fecha, hora, asiento } = req.body;
+    const { nombre, correo, origen, destino, precio, fecha, hora, asiento } = req.body;
 
     if (!precio || !fecha || !hora || !asiento) {
       return res.status(400).json({ error: "Faltan datos" });
@@ -252,7 +252,7 @@ app.post("/pagar", async (req, res) => {
 
       notification_url: "https://buses-vientosur.onrender.com/webhook",
       back_urls: {
-        success:`https://buses-vientosur.onrender.com/boleto.html?fecha=${fecha}&hora=${hora}&asiento=${asiento}`,
+        success: `https://buses-vientosur.onrender.com/boleto.html?nombre=${nombre}&correo=${correo}&origen=${origen}&destino=${destino}&fecha=${fecha}&hora=${hora}&asiento=${asiento}`,
         failure: "https://buses-vientosur.onrender.com/error.html",
         pending: "https://buses-vientosur.onrender.com/pendiente.html"
       },
