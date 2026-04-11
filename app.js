@@ -6,8 +6,8 @@ const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
-  'https://akvlxlrlazluymxfuvp.supabase.co',
-  'sb_publishable_QMhf4s9npEtaD6i_9qLUxQ_goGalMwZ'
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
 );
 
 
