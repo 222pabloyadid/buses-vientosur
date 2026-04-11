@@ -3,6 +3,14 @@
 const express = require("express");
 const fs = require('fs');
 const fetch = require('node-fetch');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  'https://akvlxlrlazluymxfuvp.supabase.co',
+  'sb_publishable_QMhf4s9npEtaD6i_9qLUxQ_goGalMwZ'
+);
+
+
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const { MercadoPagoConfig, Preference } = require("mercadopago");
@@ -303,9 +311,24 @@ app.post("/webhook", async (req, res) => {
               console.log("PAGO NO APROBADO:", payment.status);
               return res.sendStatus(200);
             }
-
+            
             const datos = JSON.parse(payment.external_reference || "{}");
+            
+            const { error } = await supabase.from('ventas').insert([
+              {
+                asiento: Number(datos.asiento),
+                fecha: datos.fecha,
+                hora: datos.hora,
+                ruta: datos.ruta || 'Toltén-Temuco',
+                estado: 'pagado'
+              }
+            ]);
 
+            if (error) {
+              console.log("❌ ERROR SUPABASE:", error);
+            } else {
+              console.log("✅ Guardado en Supabase");
+            }
 
             await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
               method: "POST",
