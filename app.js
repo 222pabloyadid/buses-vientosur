@@ -233,6 +233,14 @@ app.post("/pagar", async (req, res) => {
           currency_id: "CLP"
         }
       ],
+
+      external_reference: JSON.stringify({
+        asiento,
+        fecha,
+        hora,
+        nombre
+      }),
+
       notification_url: "https://buses-vientosur.onrender.com/webhook",
       back_urls: {
         success:`https://buses-vientosur.onrender.com/exito.html?fecha=${fecha}&hora=${hora}&asiento=${asiento}`,
@@ -283,13 +291,16 @@ app.post("/webhook", async (req, res) => {
 
             const paymentId = data.data.id;
 
+            const payment = await mercadopago.payment.findById(paymentId);
+            const datos = JSON.parse(payment.body.external_reference || "{}");
+
             const nuevaVenta = {
-                asiento: Math.floor(Math.random() * 40) + 1,
-                fecha: "2026-04-10",
-                hora: "10:00",
-                nombre: "Cliente Web",
-                pago_id: paymentId
-            };
+            asiento: Number(datos.asiento),
+            fecha: datos.fecha,
+            hora: datos.hora,
+            nombre: datos.nombre || "Cliente",
+            pago_id: paymentId
+          };
 
             let ventas = [];
             try {
