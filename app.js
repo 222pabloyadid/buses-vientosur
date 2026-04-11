@@ -2,6 +2,7 @@
 
 const express = require("express");
 const fs = require('fs');
+const fetch = require('node-fetch');
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const { MercadoPagoConfig, Preference } = require("mercadopago");
