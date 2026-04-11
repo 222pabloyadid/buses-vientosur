@@ -357,7 +357,7 @@ app.listen(3000, () => {
 });
 async function obtenerAsientosOcupados(fecha, hora) {
   try {
-    const response = await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
+    const response = await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec"); 
     const data = await response.json();
 
     const ocupados = data
