@@ -24,7 +24,7 @@ const tarifas = require("./tarifas.js");
 const estudiantes = require("./data/estudiantes");
 const bloqueados = require("./bloqueos.js");
 const filtrarPorTiempo = require("./filtroTiempo.js");
-const { guardarVenta, obtenerAsientosOcupados } = require("./ventas.js");
+const { guardarVenta } = require("./ventas.js");
 
 
 
