@@ -305,6 +305,21 @@ app.post("/webhook", async (req, res) => {
 
             const datos = JSON.parse(payment.external_reference || "{}");
 
+
+            await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                fecha: datos.fecha,
+                hora: datos.hora,
+                asiento: datos.asiento,
+                nombre: datos.nombre,
+                pago_id: paymentId
+              })
+            });
+
             const nuevaVenta = {
             asiento: Number(datos.asiento),
             fecha: datos.fecha,
