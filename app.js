@@ -353,17 +353,6 @@ app.post("/webhook", async (req, res) => {
             pago_id: paymentId
           };
 
-            let ventas = [];
-            try {
-                ventas = JSON.parse(fs.readFileSync('ventas.json', 'utf8'));
-            } catch (e) {
-                ventas = [];
-            }
-
-            ventas.push(nuevaVenta);
-
-           // fs.writeFileSync('ventas.json', JSON.stringify(ventas, null, 2));
-
             console.log("VENTA GUARDADA:", nuevaVenta);
         }
 
