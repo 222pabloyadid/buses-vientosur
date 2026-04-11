@@ -291,8 +291,19 @@ app.post("/webhook", async (req, res) => {
 
             const paymentId = data.data.id;
 
-            const payment = await mercadopago.payment.findById(paymentId);
-            const datos = JSON.parse(payment.body.external_reference || "{}");
+            const { Payment } = require("mercadopago");
+            const paymentClient = new Payment(client);
+
+            const payment = await paymentClient.get({
+              id: paymentId
+            });            
+              
+            if (payment.status !== "approved") {
+              console.log("PAGO NO APROBADO:", payment.status);
+              return res.sendStatus(200);
+            }
+
+            const datos = JSON.parse(payment.external_reference || "{}");
 
             const nuevaVenta = {
             asiento: Number(datos.asiento),
