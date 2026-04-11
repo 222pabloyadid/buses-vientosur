@@ -320,7 +320,7 @@ app.post("/webhook", async (req, res) => {
                 asiento: Number(datos.asiento),
                 fecha: datos.fecha,
                 hora: datos.hora,
-                ruta: datos.ruta || 'Toltén-Temuco',
+                ruta: datos.ruta,
                 estado: 'pagado'
               }
             ]);
@@ -381,17 +381,21 @@ app.listen(3000, () => {
 });
 async function obtenerAsientosOcupados(fecha, hora) {
   try {
-    const response = await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec"); 
-    const data = await response.json();
+    const { data, error } = await supabase
+      .from("ventas")
+      .select("asiento")
+      .eq("fecha", fecha)
+      .eq("hora", hora);
 
-    const ocupados = data
-      .filter(v => v.fecha === fecha && v.hora === hora)
-      .map(v => Number(v.asiento));
+    if (error) {
+      console.error("❌ Error leyendo Supabase:", error);
+      return [];
+    }
 
-    return ocupados;
+    return data.map(v => Number(v.asiento));
 
-  } catch (error) {
-    console.error("Error leyendo Sheets:", error);
+  } catch (err) {
+    console.error("❌ Error general:", err);
     return [];
   }
 }
