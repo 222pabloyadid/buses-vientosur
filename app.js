@@ -313,7 +313,8 @@ app.post("/webhook", async (req, res) => {
             }
             
             const datos = JSON.parse(payment.external_reference || "{}");
-            
+             
+            console.log("ENTRANDO A SUPABASE");            
             const { error } = await supabase.from('ventas').insert([
               {
                 asiento: Number(datos.asiento),
