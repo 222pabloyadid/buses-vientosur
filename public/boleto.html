@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Boleto VientoSur</title>
+</head>
+<body>
+
+<h2>🎟️ Boleto Confirmado</h2>
+
+<p id="info"></p>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+
+document.getElementById("info").innerText = `
+Nombre: ${params.get("nombre")}
+Ruta: ${params.get("ruta")}
+Fecha: ${params.get("fecha")}
+Hora: ${params.get("hora")}
+Asiento: ${params.get("asiento")}
+`;
+</script>
+
+</body>
+</html>
