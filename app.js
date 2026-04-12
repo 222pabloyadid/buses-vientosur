@@ -411,3 +411,19 @@ async function obtenerAsientosOcupados(fecha, hora) {
     return [];
   }
 }
+app.get("/test-email", async (req, res) => {
+  try {
+    const result = await resend.emails.send({
+      from: "onboarding@resend.dev",
+      to: ["pyanez089@gmail.com"],
+      subject: "PRUEBA VIENTOSUR",
+      html: "<h1>Correo funcionando 🚀</h1>"
+    });
+
+    console.log("EMAIL TEST:", result);
+    res.send("Correo enviado");
+  } catch (error) {
+    console.log("ERROR EMAIL:", error);
+    res.send("Error al enviar correo");
+  }
+});
