@@ -341,7 +341,7 @@ app.post("/webhook", async (req, res) => {
             }
             
             await resend.emails.send({
-              from: "pasajes@busesvientosur.cl",
+              from: "onboarding@resend.dev",
               to: [correo],
               subject: "🎫 Tu pasaje está confirmado",
               html: `
