@@ -352,7 +352,7 @@ app.post("/webhook", async (req, res) => {
                 <p><strong>Fecha:</strong> ${fecha}</p>
                 <p><strong>Hora:</strong> ${hora}</p>
                 <p><strong>Asiento:</strong> ${asiento}</p>
-              `
+              `,
             });
    
             console.log("PASO POR AQUI");         
