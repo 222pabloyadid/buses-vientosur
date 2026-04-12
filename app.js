@@ -336,95 +336,101 @@ app.get('/bus', (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-    try {
-        const data = req.body;
+  try {
+    const data = req.body;
 
-        console.log("WEBHOOK RECIBIDO:", data);
+    console.log("WEBHOOK RECIBIDO:", data);
 
-        // Solo procesar pagos
-        if (data.type === "payment" || data.action === "payment.created") {
-            console.log("PAGO DETECTADO");
+    // Solo procesar pagos
+    if (data.type === "payment" || data.action === "payment.created") {
+      console.log("PAGO DETECTADO");
 
-            const paymentId = data.data.id;
+      const paymentId = data.data.id;
 
-            const { Payment } = require("mercadopago");
-            const paymentClient = new Payment(client);
+      const { Payment } = require("mercadopago");
+      const paymentClient = new Payment(client);
 
-            const payment = await paymentClient.get({
-              id: paymentId
-            });            
-              
-            if (payment.status !== "approved") {
-              console.log("PAGO NO APROBADO:", payment.status);
-              return res.sendStatus(200);
-            }
-            
-            const datos = JSON.parse(payment.external_reference || "{}");
-            
-            const nombre = datos.nombre;
-            const correo = datos.correo;
-            const origen = datos.origen;
-            const destino = datos.destino;
-            const fecha = datos.fecha;
-            const hora = datos.hora;
-            const asiento = datos.asiento;
+      const payment = await paymentClient.get({
+        id: paymentId
+      });
 
- 
-            console.log("ENTRANDO A SUPABASE");            
-            const { error } = await supabase.from('ventas').insert([
-              {
-                asiento: Number(datos.asiento),
-                fecha: datos.fecha,
-                hora: datos.hora,
-                ruta: datos.origen + " - " + datos.destino,
-                estado: 'pagado'
-              }
-            ]); 
-    
-            if (error) {
-              console.log(" ERROR SUPABASE:", error);
-            } else {
-              console.log(" Guardado en Supabase");
-            }
-            
-            enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento);
-   
-            console.log("PASO POR AQUI");         
-            await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec",{
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                fecha: datos.fecha,
-                hora: datos.hora,
-                asiento: datos.asiento,
-                nombre: datos.nombre,
-                pago_id: paymentId
-              })
-            });
+      if (payment.status !== "approved") {
+        console.log("PAGO NO APROBADO:", payment.status);
+        return res.sendStatus(200);
+      }
 
-            const nuevaVenta = {
-              asiento: Number(datos.asiento),
-              fecha: datos.fecha,
-              hora: datos.hora,
-              nombre: datos.nombre || "Cliente",
-              pago_id: paymentId
-            };
+      const datos = JSON.parse(payment.external_reference || "{}");
 
-            console.log("VENTA GUARDADA:", nuevaVenta);
+      const nombre = datos.nombre;
+      const correo = datos.correo;
+      const origen = datos.origen;
+      const destino = datos.destino;
+      const fecha = datos.fecha;
+      const hora = datos.hora;
+      const asiento = datos.asiento;
 
-            res.sendStatus(200);
+      console.log("ENTRANDO A SUPABASE");
 
-            } catch (error) {
-              console.log("ERROR WEBHOOK:", error);
-              res.sendStatus(500);
-            }
-            });
-  
+      const { error } = await supabase.from("ventas").insert([
+        {
+          asiento: Number(datos.asiento),
+          fecha: datos.fecha,
+          hora: datos.hora,
+          ruta: datos.origen + " - " + datos.destino,
+          estado: "pagado"
+        }
+      ]);
+
+      if (error) {
+        console.log("ERROR SUPABASE:", error);
+      } else {
+        console.log("GUARDADO EN SUPABASE");
+      }
+
+      enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento);
+
+      console.log("PASO POR AQUI");
+
+      await fetch("https://script.google.com/macros/s/AKfycbwXAjjmKEZ4jqj3f58MmifBTgRqT9nKxyuQ9tT1C3vPN44ka-K1PRMAkTZR1s3Ft__7/exec", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          fecha: datos.fecha,
+          hora: datos.hora,
+          asiento: datos.asiento,
+          nombre: datos.nombre,
+          pago_id: paymentId
+        })
+      });
+
+      const nuevaVenta = {
+        asiento: Number(datos.asiento),
+        fecha: datos.fecha,
+        hora: datos.hora,
+        nombre: datos.nombre || "Cliente",
+        pago_id: paymentId
+      };
+
+      console.log("VENTA GUARDADA:", nuevaVenta);
+    }
+
+    res.sendStatus(200);
+
+  } catch (error) {
+    console.log("ERROR WEBHOOK:", error);
+    res.sendStatus(500);
+  }
+});
+
+
 // 🚀 INICIAR SERVIDOR
 app.listen(3000, () => {
   console.log("Servidor corriendo en http://localhost:3000");
 });
+
+                    
+           
 
 
