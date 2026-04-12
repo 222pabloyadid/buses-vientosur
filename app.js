@@ -247,7 +247,7 @@ app.post("/pagar", async (req, res) => {
         asiento,
         fecha,
         hora,
-        nombre
+        nombre,
         correo,
         origen,
         destino
