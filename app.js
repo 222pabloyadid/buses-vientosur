@@ -47,6 +47,8 @@ transporter.sendMail({
     console.log(" CORREO ENVIADO:", info.response);
   }
 });
+ 
+}
 
 function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
 
@@ -342,33 +344,18 @@ app.post("/webhook", async (req, res) => {
     console.log("WEBHOOK RECIBIDO:", data);
 
     if (data.type === "payment" || data.action === "payment.created") {
-      console.log("PAGO DETECTADO");
-
       const paymentId = data.data.id;
 
       const { Payment } = require("mercadopago");
       const paymentClient = new Payment(client);
 
-      const payment = await paymentClient.get({
-        id: paymentId
-      });
+      const payment = await paymentClient.get({ id: paymentId });
 
       if (payment.status !== "approved") {
-        console.log("PAGO NO APROBADO:", payment.status);
         return res.sendStatus(200);
       }
 
       const datos = JSON.parse(payment.external_reference || "{}");
-
-      const nombre = datos.nombre;
-      const correo = datos.correo;
-      const origen = datos.origen;
-      const destino = datos.destino;
-      const fecha = datos.fecha;
-      const hora = datos.hora;
-      const asiento = datos.asiento;
-
-      console.log("ENTRANDO A SUPABASE");
 
       const { error } = await supabase.from("ventas").insert([
         {
@@ -380,15 +367,17 @@ app.post("/webhook", async (req, res) => {
         }
       ]);
 
-      if (error) {
-        console.log("ERROR SUPABASE:", error);
-      } else {
-        console.log("GUARDADO EN SUPABASE");
-      }
+      if (error) console.log("ERROR SUPABASE:", error);
 
-      enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento);
-
-      console.log("PASO POR AQUI");
+      enviarCorreoSMTP(
+        datos.correo,
+        datos.nombre,
+        datos.origen,
+        datos.destino,
+        datos.fecha,
+        datos.hora,
+        datos.asiento
+      );
 
       await fetch("https://script.google.com/macros/s/AKfycbwXAjjmKEZ4jqj3f58MmifBTgRqT9nKxyuQ9tT1C3vPN44ka-K1PRMAkTZR1s3Ft__7/exec", {
         method: "POST",
@@ -404,33 +393,27 @@ app.post("/webhook", async (req, res) => {
         })
       });
 
-      const nuevaVenta = {
-        asiento: Number(datos.asiento),
-        fecha: datos.fecha,
-        hora: datos.hora,
-        nombre: datos.nombre || "Cliente",
-        pago_id: paymentId
-      };
-
-      console.log("VENTA GUARDADA:", nuevaVenta);
+      return res.sendStatus(200);
     }
 
-     res.sendStatus(200);
+    res.sendStatus(200);
 
   } catch (error) {
     console.log("ERROR WEBHOOK:", error);
     res.sendStatus(500);
   }
 });
+   
 
     
 
 
 // 🚀 INICIAR SERVIDOR
-app.listen(3000, () => {
-  console.log("Servidor corriendo en http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("Servidor corriendo en puerto", PORT);
 });
-}
                     
            
 
