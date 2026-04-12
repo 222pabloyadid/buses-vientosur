@@ -351,9 +351,9 @@ app.post("/webhook", async (req, res) => {
                 <p><strong>Fecha:</strong> ${fecha}</p>
                 <p><strong>Hora:</strong> ${hora}</p>
                 <p><strong>Asiento:</strong> ${asiento}</p>
-              `
+              `,
             });
-          }
+
             
             await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
               method: "POST",
