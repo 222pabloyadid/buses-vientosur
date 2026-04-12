@@ -418,7 +418,7 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
 
-  } catch (error) {
+    catch (error) {
     console.log("ERROR WEBHOOK:", error);
     res.sendStatus(500);
   }
