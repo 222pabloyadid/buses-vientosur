@@ -414,7 +414,7 @@ app.post("/webhook", async (req, res) => {
       };
 
       console.log("VENTA GUARDADA:", nuevaVenta);
-    }
+    
 
     res.sendStatus(200);
 
