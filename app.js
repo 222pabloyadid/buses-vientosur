@@ -248,6 +248,9 @@ app.post("/pagar", async (req, res) => {
         fecha,
         hora,
         nombre
+        correo,
+        origen,
+        destino
       }),
 
       notification_url: "https://buses-vientosur.onrender.com/webhook",
