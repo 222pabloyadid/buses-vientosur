@@ -200,6 +200,9 @@ function pagar() {
 
   const params = new URLSearchParams(window.location.search);
   const nombre = params.get("nombre");
+  const correo = params.get("correo");
+  const origen = params.get("origen");
+  const destino = params.get("destino");
 
   fetch("https://buses-vientosur.onrender.com/pagar", {
     method: "POST",
@@ -208,6 +211,9 @@ function pagar() {
     },
     body: JSON.stringify({
       nombre: nombre,
+      correo: correo,
+      origen: origen,
+      destino: destino,
       precio: precio,
       fecha: fecha,
       hora: hora,
