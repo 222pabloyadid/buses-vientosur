@@ -40,12 +40,12 @@ transporter.sendMail({
       path: archivo
     }
   ]
-}, (err, info) => {
-  if (err) {
-    console.log(" ERROR CORREO:", err);
-  } else {
-    console.log(" CORREO ENVIADO:", info.response);
-  }
+})
+.then(info => {
+  console.log("✅ CORREO ENVIADO:", info.response);
+})
+.catch(err => {
+  console.log("❌ ERROR CORREO REAL:", err);
 });
  
 }
