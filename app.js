@@ -390,7 +390,7 @@ app.post("/webhook", async (req, res) => {
             enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento);
    
             console.log("PASO POR AQUI");         
-            await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
+            await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec",{
               method: "POST",
               headers: {
                 "Content-Type": "application/json"
@@ -405,23 +405,22 @@ app.post("/webhook", async (req, res) => {
             });
 
             const nuevaVenta = {
-            asiento: Number(datos.asiento),
-            fecha: datos.fecha,
-            hora: datos.hora,
-            nombre: datos.nombre || "Cliente",
-            pago_id: paymentId
-          };
+              asiento: Number(datos.asiento),
+              fecha: datos.fecha,
+              hora: datos.hora,
+              nombre: datos.nombre || "Cliente",
+              pago_id: paymentId
+            };
 
             console.log("VENTA GUARDADA:", nuevaVenta);
-        }
 
-        res.sendStatus(200);
+            res.sendStatus(200);
 
-    } catch (error) {
-        console.log("ERROR WEBHOOK:", error);
-        res.sendStatus(500);
-    }
-});
+            } catch (error) {
+              console.log("ERROR WEBHOOK:", error);
+              res.sendStatus(500);
+            }
+            });
   
 // 🚀 INICIAR SERVIDOR
 app.listen(3000, () => {
