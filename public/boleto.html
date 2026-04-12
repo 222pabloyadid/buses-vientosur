@@ -14,7 +14,7 @@ const params = new URLSearchParams(window.location.search);
 
 document.getElementById("info").innerText = `
 Nombre: ${params.get("nombre")}
-Ruta: ${params.get("ruta")}
+Ruta: ${params.get("origen")} - ${params.get("destino")}
 Fecha: ${params.get("fecha")}
 Hora: ${params.get("hora")}
 Asiento: ${params.get("asiento")}
