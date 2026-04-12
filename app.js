@@ -339,7 +339,8 @@ app.post("/webhook", async (req, res) => {
             } else {
               console.log(" Guardado en Supabase");
             }
-              
+            
+            console.log("PASO POR AQUI");
             await resend.emails.send({
               from: "Buses VientoSur <onboarding@resend.dev>",
               to: [correo],
