@@ -313,24 +313,47 @@ app.post("/webhook", async (req, res) => {
             }
             
             const datos = JSON.parse(payment.external_reference || "{}");
-             
+            
+            const nombre = datos.nombre;
+            const correo = datos.correo;
+            const origen = datos.origen;
+            const destino = datos.destino;
+            const fecha = datos.fecha;
+            const hora = datos.hora;
+            const asiento = datos.asiento;
+
+ 
             console.log("ENTRANDO A SUPABASE");            
             const { error } = await supabase.from('ventas').insert([
               {
                 asiento: Number(datos.asiento),
                 fecha: datos.fecha,
                 hora: datos.hora,
-                ruta: datos.ruta,
+                ruta: datos.origen + " - " + datos.destino,
                 estado: 'pagado'
               }
-            ]);
-
+            ]); 
+    
             if (error) {
-              console.log("❌ ERROR SUPABASE:", error);
+              console.log(" ERROR SUPABASE:", error);
             } else {
-              console.log("✅ Guardado en Supabase");
-            }
+              console.log(" Guardado en Supabase");
 
+              await resend.emails.send({
+              from: "Buses VientoSur <onboarding@resend.dev>",
+              to: [correo],
+              subject: "🎫 Tu pasaje está confirmado",
+              html: `
+                <h2>✅ Boleto Confirmado</h2>
+                <p><strong>Nombre:</strong> ${nombre}</p>
+                <p><strong>Ruta:</strong> ${origen} → ${destino}</p>
+                <p><strong>Fecha:</strong> ${fecha}</p>
+                <p><strong>Hora:</strong> ${hora}</p>
+                <p><strong>Asiento:</strong> ${asiento}</p>
+              `
+            });
+          }
+            
             await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
               method: "POST",
               headers: {
