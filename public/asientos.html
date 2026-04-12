@@ -125,8 +125,18 @@ h2 {
 // 🔹 obtener parámetros de la URL
 
 const params = new URLSearchParams(window.location.search);
-const origen = params.get("origen");
-const destino = params.get("destino");
+let origen = params.get("origen");
+let destino = params.get("destino");
+
+// guardar si vienen
+if (origen) localStorage.setItem("origen", origen);
+if (destino) localStorage.setItem("destino", destino);
+
+// recuperar si vienen null
+if (!origen) origen = localStorage.getItem("origen");
+if (!destino) destino = localStorage.getItem("destino");
+
+
 const nombre = params.get("nombre");
 const correo = params.get("correo");
 const fecha = params.get("fecha");
@@ -201,8 +211,16 @@ function pagar() {
   const params = new URLSearchParams(window.location.search);
   const nombre = params.get("nombre");
   const correo = params.get("correo");
-  const origen = params.get("origen");
-  const destino = params.get("destino");
+  let origen = params.get("origen");
+  let destino = params.get("destino");
+
+  // 🔥 si vienen null, los recuperamos
+  if (!origen) origen = localStorage.getItem("origen");
+  if (!destino) destino = localStorage.getItem("destino");
+
+  // 🔥 los guardamos para el resto del flujo
+  localStorage.setItem("origen", origen);
+  localStorage.setItem("destino", destino);
 
   fetch("https://buses-vientosur.onrender.com/pagar", {
     method: "POST",
