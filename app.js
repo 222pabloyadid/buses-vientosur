@@ -341,7 +341,6 @@ app.post("/webhook", async (req, res) => {
 
     console.log("WEBHOOK RECIBIDO:", data);
 
-    // Solo procesar pagos
     if (data.type === "payment" || data.action === "payment.created") {
       console.log("PAGO DETECTADO");
 
@@ -414,22 +413,24 @@ app.post("/webhook", async (req, res) => {
       };
 
       console.log("VENTA GUARDADA:", nuevaVenta);
-    
+    }
 
-    res.sendStatus(200);
+     res.sendStatus(200);
 
-    catch (error) {
+  } catch (error) {
     console.log("ERROR WEBHOOK:", error);
     res.sendStatus(500);
   }
 });
+
+    
 
 
 // 🚀 INICIAR SERVIDOR
 app.listen(3000, () => {
   console.log("Servidor corriendo en http://localhost:3000");
 });
-
+}
                     
            
 
