@@ -3,7 +3,7 @@
 const express = require("express");
 const fs = require('fs');
 const fetch = require('node-fetch');
-const { createClient } = require('@supabase/supabase-js');
+}const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -352,10 +352,10 @@ app.post("/webhook", async (req, res) => {
                 <p><strong>Fecha:</strong> ${fecha}</p>
                 <p><strong>Hora:</strong> ${hora}</p>
                 <p><strong>Asiento:</strong> ${asiento}</p>
-              `,
+              `
             });
-
-            
+   
+            console.log("PASO POR AQUI");         
             await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
               method: "POST",
               headers: {
