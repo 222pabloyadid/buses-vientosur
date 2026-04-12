@@ -222,7 +222,7 @@ app.get("/tarifa", (req, res) => {
 // 🪑 ASIENTOS (29)
 app.get("/asientos", async (req, res) => {
 const { fecha, hora } = req.query;
-const ocupados = await obtenerAsientosOcupados(fecha, hora);
+const ocupados = [];
 
 console.log("OCUPADOS:", ocupados);
 
