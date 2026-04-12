@@ -338,8 +338,9 @@ app.post("/webhook", async (req, res) => {
               console.log(" ERROR SUPABASE:", error);
             } else {
               console.log(" Guardado en Supabase");
-
-              await resend.emails.send({
+            }
+              
+            await resend.emails.send({
               from: "Buses VientoSur <onboarding@resend.dev>",
               to: [correo],
               subject: "🎫 Tu pasaje está confirmado",
