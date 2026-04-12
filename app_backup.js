@@ -2,7 +2,6 @@
 
 const express = require("express");
 const fs = require('fs');
-const PDFDocument = require("pdfkit");
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -14,59 +13,6 @@ const supabase = createClient(
 
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
-const nodemailer = require("nodemailer");
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-
-function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento) {
-
- console.log("📨 Enviando correo a:", correo);
-const archivo = generarPDF(nombre, origen, destino, fecha, hora, asiento);
-
-transporter.sendMail({
-  from: process.env.EMAIL_USER,
-  to: correo,
-  subject: "Tu pasaje Buses VientoSur",
-  text: "Adjunto tu boleto",
-  attachments: [
-    {
-      filename: "boleto.pdf",
-      path: archivo
-    }
-  ]
-}, (err, info) => {
-  if (err) {
-    console.log(" ERROR CORREO:", err);
-  } else {
-    console.log(" CORREO ENVIADO:", info.response);
-  }
-});
-
-function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
-
-  const file = "boleto_" + Date.now() + ".pdf";
-  const doc = new PDFDocument();
-
-  doc.pipe(fs.createWriteStream(file));
-
-  doc.text("Buses VientoSur");
-  doc.text("Nombre: " + nombre);
-  doc.text("Ruta: " + origen + " - " + destino);
-  doc.text("Fecha: " + fecha);
-  doc.text("Hora: " + hora);
-  doc.text("Asiento: " + asiento);
-
-  doc.end();
-
-  return file;
-}
-
 const { MercadoPagoConfig, Preference } = require("mercadopago");
 
 
@@ -246,7 +192,17 @@ app.post("/comprar", async (req, res) => {
 
   guardarVenta(fecha, hora, asiento);
   
-  enviarCorreoSMTP(correo, "", "", "", fecha, hora, asiento);
+  await resend.emails.send({
+  from: 'onboarding@resend.dev',
+  to: 'pasajes.busesvientosur@gmail.com',
+  subject: 'Tu pasaje Buses VientoSur',
+  html: `
+    <h2>Compra confirmada ✅</h2>
+    <p><strong>Fecha:</strong> ${fecha}</p>
+    <p><strong>Hora:</strong> ${hora}</p>
+    <p><strong>Asiento:</strong> ${asiento}</p>
+  `
+});
   
   res.json({ ok: true });
 });
@@ -387,7 +343,19 @@ app.post("/webhook", async (req, res) => {
               console.log(" Guardado en Supabase");
             }
             
-            enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento);
+            resend.emails.send({
+              from: "onboarding@resend.dev",
+              to: [correo],
+              subject: "🎫 Tu pasaje está confirmado",
+              html: `
+                <h2>✅ Boleto Confirmado</h2>
+                <p><strong>Nombre:</strong> ${nombre}</p>
+                <p><strong>Ruta:</strong> ${origen} → ${destino}</p>
+                <p><strong>Fecha:</strong> ${fecha}</p>
+                <p><strong>Hora:</strong> ${hora}</p>
+                <p><strong>Asiento:</strong> ${asiento}</p>
+              `
+            });
    
             console.log("PASO POR AQUI");         
             await fetch("https://script.google.com/macros/s/AKfycbwXAjjmK0Z4jqj3f58MmifBTgRqT9nKxyqU9tT1C3vPN44ka-K1PRMAkTzR1s3Ft_-7/exec", {
