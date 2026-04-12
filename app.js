@@ -427,39 +427,5 @@ app.post("/webhook", async (req, res) => {
 app.listen(3000, () => {
   console.log("Servidor corriendo en http://localhost:3000");
 });
-async function obtenerAsientosOcupados(fecha, hora) {
-  try {
-    const { data, error } = await supabase
-      .from("ventas")
-      .select("asiento")
-      .eq("fecha", fecha)
-      .eq("hora", hora);
 
-    if (error) {
-      console.error("❌ Error leyendo Supabase:", error);
-      return [];
-    }
 
-    return data.map(v => Number(v.asiento));
-
-  } catch (err) {
-    console.error("❌ Error general:", err);
-    return [];
-  }
-}
-app.get("/test-email", async (req, res) => {
-  try {
-    const result = await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: ["pyanez089@gmail.com"],
-      subject: "PRUEBA VIENTOSUR",
-      html: "<h1>Correo funcionando 🚀</h1>"
-    });
-
-    console.log("EMAIL TEST:", result);
-    res.send("Correo enviado");
-  } catch (error) {
-    console.log("ERROR EMAIL:", error);
-    res.send("Error al enviar correo");
-  }
-});
