@@ -21,7 +21,7 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 
   try {
     await resend.emails.send({
-      from: "Buses VientoSur <onboarding@resend.dev>",
+      from: "Buses VientoSur <ventas@busesvientosur.cl>",
       to: correo,
       subject: "Tu pasaje Buses VientoSur",
       html: `
@@ -406,6 +406,26 @@ app.listen(PORT, () => {
   console.log("Servidor corriendo en puerto", PORT);
 });
                     
-           
+async function cargarBloqueos() {
+  const params = new URLSearchParams(window.location.search);
+
+  const fecha = params.get("fecha");
+  const hora = params.get("hora");
+  const origen = params.get("origen");
+  const destino = params.get("destino");
+
+  const res = await fetch(/asientos?fecha=${fecha}&hora=${hora}&origen=${origen}&destino=${destino});
+  const ocupados = await res.json();
+
+  ocupados.forEach(v => {
+    const btn = document.getElementById("asiento-" + v.asiento);
+    if (btn) {
+      btn.disabled = true;
+      btn.style.background = "red";
+    }
+  });
+}
+
+cargarBloqueos();           
 
 
