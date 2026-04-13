@@ -12,41 +12,33 @@ const supabase = createClient(
 );
 
 
-//const { Resend } = require("resend");
-//const resend = new Resend(process.env.RESEND_API_KEY);
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+
+async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento) {
+  console.log("📨 Enviando correo a:", correo);
+
+  try {
+    await resend.emails.send({
+      from: "Buses VientoSur <onboarding@resend.dev>",
+      to: correo,
+      subject: "Tu pasaje Buses VientoSur",
+      html: `
+        <h2>🚌 Boleto Confirmado</h2>
+        <p>Nombre: ${nombre}</p>
+        <p>Ruta: ${origen} - ${destino}</p>
+        <p>Fecha: ${fecha}</p>
+        <p>Hora: ${hora}</p>
+        <p>Asiento: ${asiento}</p>
+      `
+    });
+
+    console.log("✅ CORREO ENVIADO");
+  } catch (error) {
+    console.log("❌ ERROR CORREO:", error);
   }
-});
-
-function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento) {
-
- console.log("📨 Enviando correo a:", correo);
-const archivo = generarPDF(nombre, origen, destino, fecha, hora, asiento);
-
-transporter.sendMail({
-  from: process.env.EMAIL_USER,
-  to: correo,
-  subject: "Tu pasaje Buses VientoSur",
-  text: "Adjunto tu boleto",
-  attachments: [
-    {
-      filename: "boleto.pdf",
-      path: archivo
-    }
-  ]
-})
-.then(info => {
-  console.log("✅ CORREO ENVIADO:", info.response);
-})
-.catch(err => {
-  console.log("❌ ERROR CORREO REAL:", err);
-});
+}
  
 }
 
