@@ -40,7 +40,6 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
   }
 }
  
-}
 
 function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
 
