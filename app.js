@@ -6,6 +6,8 @@ const PDFDocument = require("pdfkit");
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 
+const bloqueados = require("./bloqueos");
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
@@ -276,6 +278,22 @@ app.get("/admin/bloquear", (req, res) => {
     bloqueados.push(hora);
   }
   
+  res.json({ ok: true, bloqueados });
+});
+
+
+app.get("/admin/desbloquear", (req, res) => {
+  const { hora, key } = req.query;
+
+  if (key !== "1234") {
+    return res.json({ ok: false, error: "No autorizado" });
+  }
+
+  const index = bloqueados.indexOf(hora);
+  if (index !== -1) {
+    bloqueados.splice(index, 1);
+  }
+
   res.json({ ok: true, bloqueados });
 });
 
