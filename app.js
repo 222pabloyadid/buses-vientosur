@@ -414,7 +414,7 @@ async function cargarBloqueos() {
   const origen = params.get("origen");
   const destino = params.get("destino");
 
-  const res = await fetch(/asientos?fecha=${fecha}&hora=${hora}&origen=${origen}&destino=${destino});
+  const res = await fetch(`/asientos?fecha=${fecha}&hora=${hora}&origen=${origen}&destino=${destino}`);
   const ocupados = await res.json();
 
   ocupados.forEach(v => {
