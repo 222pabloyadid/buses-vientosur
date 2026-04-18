@@ -64,7 +64,7 @@ function verBus() {
     const fecha = document.getElementById("fecha").value;
     const hora = document.getElementById("hora").value;
 
-    fetch("/bus?fecha=" + fecha + "&hora=" + hora)
+    fetch("https://buses-vientosur.onrender.com/bus?fecha=" + fecha + "&hora=" + hora)
     .then(res => res.json())
     .then(data => {
 
