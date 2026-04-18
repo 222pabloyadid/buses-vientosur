@@ -212,22 +212,39 @@ app.get("/tarifa", (req, res) => {
 
 // 🪑 ASIENTOS (29)
 app.get("/asientos", async (req, res) => {
-const { fecha, hora } = req.query;
-const ocupados = [];
+  try {
+    const { fecha, hora } = req.query;
 
-console.log("OCUPADOS:", ocupados);
+    const { data, error } = await supabase
+      .from("ventas")
+      .select("asiento")
+      .eq("fecha", fecha)
+      .eq("hora", hora);
 
-  const asientos = [];
+    if (error) {
+      console.log("ERROR SUPABASE:", error);
+      return res.json([]);
+    }
 
-  for (let i = 1; i <= 29; i++) {
-    asientos.push({
-      numero: i,
-      ocupado: ocupados.includes(i)
-    });
+    const ocupados = data.map(v => v.asiento);
+
+    console.log("OCUPADOS:", ocupados);
+
+    const asientos = [];
+
+    for (let i = 1; i <= 29; i++) {
+      asientos.push({
+        numero: i,
+        ocupado: ocupados.includes(i)
+      });
+    }
+
+    res.json(asientos);
+
+  } catch (err) {
+    console.log("ERROR /asientos:", err);
+    res.json([]);
   }
-
-
-  res.json(asientos);
 });
 
 app.post("/comprar", async (req, res) => {
