@@ -79,7 +79,7 @@ app.use(express.static(__dirname));
 const horarios = require("./horarios.js");
 const tarifas = require("./tarifas.js");
 const estudiantes = require("./data/estudiantes");
-const bloqueados = require("./bloqueos.js");
+
 const filtrarPorTiempo = require("./filtroTiempo.js");
 const { guardarVenta } = require("./ventas.js");
 
