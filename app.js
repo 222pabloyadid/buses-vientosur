@@ -333,16 +333,27 @@ app.post("/pagar", async (req, res) => {
   }
 });
 
-app.get('/bus', (req, res) => {
-    const { fecha, hora } = req.query;
+app.get("/bus", async (req, res) => {
+  const { fecha, hora } = req.query;
 
-    const ventas = JSON.parse(fs.readFileSync('ventas.json', 'utf8'));
+  try {
+    const { data, error } = await supabase
+      .from("ventas")
+      .select("*")
+      .eq("fecha", fecha)
+      .like("hora", hora + "%");
 
-    const filtrados = ventas.filter(v => 
-      v.fecha == fecha && v.hora.substring(0,5) == hora.substring(0,5)
-    );
+    if (error) {
+      console.log("ERROR:", error);
+      return res.json([]);
+    }
 
-    res.json(filtrados);
+    res.json(data);
+
+  } catch (err) {
+    console.log("ERROR SERVER:", err);
+    res.json([]);
+  }
 });
 
 app.post("/webhook", async (req, res) => {
