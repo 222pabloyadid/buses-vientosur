@@ -373,13 +373,14 @@ app.post("/pagar", async (req, res) => {
 
 app.get("/bus", async (req, res) => {
   const { fecha, hora } = req.query;
+  const bus_id = obtenerBus(hora);
 
   try {
     const { data, error } = await supabase
       .from("ventas")
       .select("*")
       .eq("fecha", fecha)
-      .eq("hora", hora)
+      .eq("hora", bus_id);
 
     if (error) {
       console.log("ERROR:", error);
