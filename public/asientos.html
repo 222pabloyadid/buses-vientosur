@@ -143,18 +143,18 @@ const precio = params.get("precio");
 
 // mostrar info
 document.getElementById("viaje").innerText =
-`Viaje desde ${origen} hacia ${destino}
-Pasajero: ${nombre}
-Correo: ${correo}
-Fecha: ${fecha}
-Hora: ${hora}`;
+"Viaje desde " + origen + " hacia " + destino +
+"\nPasajero: " + nombre +
+"\nCorreo: " + correo +
+"\nFecha: " + fecha +
+"\nHora: " + hora;
 
 // 🔹 asientos
 let asientoSeleccionado = null;
 const bus = document.getElementById("bus");
 
 // cargar asientos
-fetch(/asientos?fecha=${fecha}&hora=${hora})
+fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
 .then(res => res.json())
 .then(data => {
     bus.innerHTML = "";
