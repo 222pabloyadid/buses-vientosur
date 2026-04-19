@@ -3,6 +3,8 @@
 const express = require("express");
 const fs = require('fs');
 const PDFDocument = require("pdfkit");
+const generarPDF = require("./pdf");
+
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -43,24 +45,6 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 }
  
 
-function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
-
-  const file = "boleto_" + Date.now() + ".pdf";
-  const doc = new PDFDocument();
-
-  doc.pipe(fs.createWriteStream(file));
-
-  doc.text("Buses VientoSur");
-  doc.text("Nombre: " + nombre);
-  doc.text("Ruta: " + origen + " - " + destino);
-  doc.text("Fecha: " + fecha);
-  doc.text("Hora: " + hora);
-  doc.text("Asiento: " + asiento);
-
-  doc.end();
-
-  return file;
-}
 
 const { MercadoPagoConfig, Preference } = require("mercadopago");
 
@@ -442,7 +426,24 @@ app.post("/webhook", async (req, res) => {
   }
 });
    
+app.get("/test-pdf", async (req, res) => {
+  try {
+    const archivo = await generarPDF({
+      nombre: "Juan Perez",
+      origen: "Toltén",
+      destino: "Temuco",
+      fecha: "2026-04-18",
+      hora: "10:00",
+      asiento: "5"
+    });
 
+    res.download(archivo);
+
+  } catch (error) {
+    console.log("ERROR PDF:", error);
+    res.send("Error generando PDF");
+  }
+});
     
 
 
