@@ -209,63 +209,60 @@ async function pagar() {
   }
 
   const params = new URLSearchParams(window.location.search);
-  const HORAS_BASE = [
-  "05:00",
-  "05:30",
-  "06:00",
-  "06:30",
-  "07:30",
-  "08:30",
-  "10:20",
-  "12:00",
-  "13:00",
-  "15:15",
-  "17:05"
-];
 
-const horaSeleccionada = params.get("hora");
+  const origen = params.get("origen");
+  const horaSeleccionada = params.get("hora");
 
-function obtenerHoraBase(hora) {
-  let base = HORAS_BASE[0];
+  function obtenerHoraBase(origen, hora) {
 
-  for (let h of HORAS_BASE) {
-    if (hora >= h) {
-      base = h;
+    const base = horarios.semana.Tolten_Temuco;
+
+    if (origen === "Tolten") return hora;
+
+    let listaOrigen = [];
+
+    if (origen === "Hualpin") listaOrigen = horarios.semana.Hualpin_Temuco;
+    if (origen === "Teodoro Schmidt") listaOrigen = horarios.semana.TeodoroSchmidt_Temuco;
+    if (origen === "Barros Arana") listaOrigen = horarios.semana.BarrosArana_Temuco;
+
+    for (let i = 0; i < listaOrigen.length; i++) {
+      if (listaOrigen[i] === hora) {
+        return base[i];
+      }
     }
+
+    return hora;
   }
 
-  return base;
-}
+  const HORA_BASE = obtenerHoraBase(origen, horaSeleccionada);
 
-const HORA_BASE = obtenerHoraBase(horaSeleccionada);
   const res = await fetch("https://buses-vientosur.onrender.com/bloquear", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    asiento: asientoSeleccionado,
-    fecha: params.get("fecha"),
-    hora: HORA_BASE,
-  })
-});
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      asiento: asientoSeleccionado,
+      fecha: params.get("fecha"),
+      hora: HORA_BASE
+    })
+  });
 
-if (!res.ok) {
-  alert("Asiento ocupado, elige otro");
-  return;
+  if (!res.ok) {
+    alert("Asiento ocupado, elige otro");
+    return;
+  }
 }
   const nombre = params.get("nombre");
   const correo = params.get("correo");
-  let origen = params.get("origen");
+  let origenFinal = origen;
   let destino = params.get("destino");
 
-  // 🔥 si vienen null, los recuperamos
-  if (!origen) origen = localStorage.getItem("origen");
-  if (!destino) destino = localStorage.getItem("destino");
+  
 
   // 🔥 los guardamos para el resto del flujo
-  localStorage.setItem("origen", origen);
-  localStorage.setItem("destino", destino);
+  if (!origenFinal) origenFinal = localStorage.getItem("origen");
+  if (!destino) destino = localStorage.getItem("destino");
 
   fetch("https://buses-vientosur.onrender.com/pagar", {
     method: "POST",
@@ -275,10 +272,10 @@ if (!res.ok) {
     body: JSON.stringify({
       nombre: nombre,
       correo: correo,
-      origen: origen,
+      origen: origenFinal,
       destino: destino,
       precio: precio,
-      fecha: fecha,
+      fecha: params.get("fecha"),
       hora: HORA_BASE,
       asiento: asientoSeleccionado
     })
