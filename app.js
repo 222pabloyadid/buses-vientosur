@@ -36,7 +36,7 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
     });
 
     // 🔹 ENVIAR CORREO CON PDF ADJUNTO
-    const fs = require("fs");
+    
 
 // leer PDF
 const pdfBuffer = fs.readFileSync(archivo);
