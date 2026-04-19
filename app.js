@@ -426,11 +426,13 @@ app.post("/webhook", async (req, res) => {
   }
 });
    
-app.get("test-pdf", async (req, res) => {
+app.get("/test-pdf", async (req, res) => {
+  console.log("ENTRO A TEST PDF");
+
   try {
     const archivo = await generarPDF({
       nombre: "Juan Perez",
-      origen: "Toltén",
+      origen: "Tolten",
       destino: "Temuco",
       fecha: "2026-04-18",
       hora: "10:00",
@@ -438,7 +440,6 @@ app.get("test-pdf", async (req, res) => {
     });
 
     res.download(archivo);
-
   } catch (error) {
     console.log("ERROR PDF:", error);
     res.send("Error generando PDF");
