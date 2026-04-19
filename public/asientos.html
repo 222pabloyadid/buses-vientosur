@@ -196,24 +196,8 @@ async function pagar() {
 
     // 🔥 función hora base
     function obtenerHoraBase(origen, hora) {
-        const base = horarios.semana.Tolten_Temuco;
-
-        if (origen === "Tolten") return hora;
-
-        let lista = [];
-
-        if (origen === "Hualpin") lista = horarios.semana.Hualpin_Temuco;
-        if (origen === "Teodoro Schmidt") lista = horarios.semana.TeodoroSchmidt_Temuco;
-        if (origen === "Barros Arana") lista = horarios.semana.BarrosArana_Temuco;
-
-        for (let i = 0; i < lista.length; i++) {
-            if (lista[i] === hora) {
-                return base[i];
-            }
-        }
-
-        return hora;
-    }
+    return hora;
+}
 
     const HORA_BASE = obtenerHoraBase(origen, hora);
 
