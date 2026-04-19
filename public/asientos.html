@@ -208,9 +208,7 @@ async function pagar() {
     return;
   }
 
-  const params = new URLSearchParams(window.location.search);
-
-  const origen = params.get("origen");
+  
   const horaSeleccionada = params.get("hora");
 
   function obtenerHoraBase(origen, hora) {
