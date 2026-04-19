@@ -7,6 +7,7 @@ const generarPDF = require("./pdf");
 
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
+const { obtenerBus } = require("./buses");
 
 const bloqueados = require("./bloqueos");
 
@@ -377,7 +378,7 @@ app.get("/bus", async (req, res) => {
       .from("ventas")
       .select("*")
       .eq("fecha", fecha)
-      .like("hora", hora + "%");
+      .eq("hora", bus_id)
 
     if (error) {
       console.log("ERROR:", error);
@@ -394,7 +395,7 @@ app.get("/bus", async (req, res) => {
 app.post("/bloquear", async (req, res) => {
   try {
     const { asiento, fecha, hora } = req.body;
-
+    const bus_id = obtenerBus(hora);
     const ahora = new Date().toISOString();
 
     // limpiar bloqueos vencidos
@@ -418,7 +419,7 @@ app.post("/bloquear", async (req, res) => {
       {
         asiento,
         fecha,
-        hora,
+        hora: bus_id,
         expires_at: new Date(Date.now() + 2 * 60 * 1000).toISOString()
       }
     ]);
