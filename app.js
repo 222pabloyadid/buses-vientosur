@@ -378,7 +378,7 @@ app.get("/bus", async (req, res) => {
       .from("ventas")
       .select("*")
       .eq("fecha", fecha)
-      .eq("hora", bus_id)
+      .eq("hora", hora)
 
     if (error) {
       console.log("ERROR:", error);
@@ -396,7 +396,7 @@ app.post("/bloquear", async (req, res) => {
   try {
     const { asiento, fecha, hora } = req.body;
     const bus_id = obtenerBus(hora);
-    const bus_id = obtenerBus(hora);
+    
     const ahora = new Date().toISOString();
 
     // limpiar bloqueos vencidos
