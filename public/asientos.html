@@ -209,7 +209,35 @@ async function pagar() {
   }
 
   const params = new URLSearchParams(window.location.search);
+  const HORAS_BASE = [
+  "05:00",
+  "05:30",
+  "06:00",
+  "06:30",
+  "07:30",
+  "08:30",
+  "10:20",
+  "12:00",
+  "13:00",
+  "15:15",
+  "17:05"
+];
 
+const horaSeleccionada = params.get("hora");
+
+function obtenerHoraBase(hora) {
+  let base = HORAS_BASE[0];
+
+  for (let h of HORAS_BASE) {
+    if (hora >= h) {
+      base = h;
+    }
+  }
+
+  return base;
+}
+
+const HORA_BASE = obtenerHoraBase(horaSeleccionada);
   const res = await fetch("https://buses-vientosur.onrender.com/bloquear", {
   method: "POST",
   headers: {
@@ -218,7 +246,7 @@ async function pagar() {
   body: JSON.stringify({
     asiento: asientoSeleccionado,
     fecha: params.get("fecha"),
-    hora: params.get("hora")
+    hora: HORA_BASE,
   })
 });
 
@@ -251,7 +279,7 @@ if (!res.ok) {
       destino: destino,
       precio: precio,
       fecha: fecha,
-      hora: hora,
+      hora: HORA_BASE,
       asiento: asientoSeleccionado
     })
   })
