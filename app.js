@@ -417,7 +417,7 @@ app.post("/webhook", async (req, res) => {
           asiento: Number(datos.asiento),
           fecha: datos.fecha,
           hora: datos.hora,
-          nobre: datos.nombre,
+          nombre: datos.nombre,
           ruta: datos.origen + " - " + datos.destino,
           estado: "pagado"
         }
