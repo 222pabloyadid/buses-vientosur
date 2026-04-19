@@ -234,13 +234,12 @@ app.get("/tarifa", (req, res) => {
 app.get("/asientos", async (req, res) => {
   try {
     const { fecha, hora } = req.query;
-    const horaBase = hora.substring(0,2) + ":00";
-
+    
     const { data, error } = await supabase
       .from("ventas")
       .select("asiento")
       .eq("fecha", fecha)
-      .eq("hora", horaBase);
+      .eq("hora", hora);
 
     if (error) {
       console.log("ERROR SUPABASE:", error);
