@@ -221,8 +221,7 @@ app.get("/estudiante", (req, res) => {
 // 💰 OBTENER TARIFA
 app.get("/tarifa", (req, res) => {
   const { origen, destino } = req.query;
-  const bus_id = obtenerBus(hora);
-
+ 
   const clave = `${origen}_${destino}`;
   const precio = tarifas[clave];
 
@@ -236,7 +235,7 @@ app.get("/tarifa", (req, res) => {
 app.get("/asientos", async (req, res) => {
   try {
     const { fecha, hora } = req.query;
-    
+   
     const { data, error } = await supabase
       .from("ventas")
       .select("asiento")
@@ -397,6 +396,7 @@ app.post("/bloquear", async (req, res) => {
   try {
     const { asiento, fecha, hora } = req.body;
     const bus_id = obtenerBus(hora);
+    const bus_id = obtenerBus(hora);
     const ahora = new Date().toISOString();
 
     // limpiar bloqueos vencidos
@@ -408,7 +408,7 @@ app.post("/bloquear", async (req, res) => {
       .select("*")
       .eq("asiento", asiento)
       .eq("fecha", fecha)
-      .like("hora", hora + "%")
+      .eq("hora", bus_id)
       .gt("expires_at", ahora);
 
     if (data && data.length > 0) {
