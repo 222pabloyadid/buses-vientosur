@@ -241,7 +241,7 @@ app.get("/asientos", async (req, res) => {
       .from("ventas")
       .select("asiento")
       .eq("fecha", fecha)
-      .eq("bus_id", bus_id)
+      .eq("hora" , hora)
 
     if (error) {
       console.log("ERROR SUPABASE:", error);
