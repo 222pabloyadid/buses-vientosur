@@ -154,7 +154,7 @@ let asientoSeleccionado = null;
 const bus = document.getElementById("bus");
 
 // cargar asientos
-fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
+fetch(`/asientos?fecha=${fecha}&hora=${HORA_BASE}`)
 .then(res => res.json())
 .then(data => {
     bus.innerHTML = "";
