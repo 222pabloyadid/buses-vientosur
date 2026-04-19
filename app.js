@@ -391,6 +391,45 @@ app.get("/bus", async (req, res) => {
     res.json([]);
   }
 });
+app.post("/bloquear", async (req, res) => {
+  try {
+    const { asiento, fecha, hora } = req.body;
+
+    const ahora = new Date();
+
+    // limpiar bloqueos vencidos
+    await supabase.from("bloqueos").delete().lt("expires_at", ahora);
+
+    // verificar si ya está bloqueado
+    const { data } = await supabase
+      .from("bloqueos")
+      .select("*")
+      .eq("asiento", asiento)
+      .eq("fecha", fecha)
+      .eq("hora", hora)
+      .gt("expires_at", ahora);
+
+    if (data.length > 0) {
+      return res.status(400).json({ error: "Asiento ocupado" });
+    }
+
+    // guardar bloqueo por 2 minutos
+    await supabase.from("bloqueos").insert([
+      {
+        asiento,
+        fecha,
+        hora,
+        expires_at: new Date(Date.now() + 2 * 60 * 1000)
+      }
+    ]);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.log("ERROR BLOQUEO:", err);
+    res.sendStatus(500);
+  }
+});
+
 
 app.post("/webhook", async (req, res) => {
   try {
