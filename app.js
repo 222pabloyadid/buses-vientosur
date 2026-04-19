@@ -21,26 +21,45 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 
 async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento) {
-  console.log("📨 Enviando correo a:", correo);
+  console.log("📩 Enviando correo a:", correo);
 
   try {
+
+    // 🔹 GENERAR PDF
+    const archivo = await generarPDF({
+      nombre,
+      origen,
+      destino,
+      fecha,
+      hora,
+      asiento
+    });
+
+    // 🔹 ENVIAR CORREO CON PDF ADJUNTO
     await resend.emails.send({
       from: "Buses VientoSur <ventas@busesvientosur.cl>",
       to: correo,
       subject: "Tu pasaje Buses VientoSur",
       html: `
-        <h2>🚌 Boleto Confirmado</h2>
+        <h2>🧾 Boleto Confirmado</h2>
         <p>Nombre: ${nombre}</p>
         <p>Ruta: ${origen} - ${destino}</p>
         <p>Fecha: ${fecha}</p>
         <p>Hora: ${hora}</p>
         <p>Asiento: ${asiento}</p>
-      `
+      `,
+      attachments: [
+        {
+          filename: "boleto.pdf",
+          path: archivo
+        }
+      ]
     });
 
-    console.log("✅ CORREO ENVIADO");
+    console.log("✅ CORREO ENVIADO CON PDF");
+
   } catch (error) {
-    console.log("❌ ERROR CORREO:", error);
+    console.error("❌ ERROR enviando correo:", error);
   }
 }
  
