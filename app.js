@@ -426,7 +426,7 @@ app.post("/webhook", async (req, res) => {
   }
 });
    
-app.get("/test-pdf", async (req, res) => {
+app.get("test-pdf", async (req, res) => {
   try {
     const archivo = await generarPDF({
       nombre: "Juan Perez",
