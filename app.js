@@ -395,7 +395,7 @@ app.post("/bloquear", async (req, res) => {
   try {
     const { asiento, fecha, hora } = req.body;
 
-    const ahora = new Date();
+    const ahora = new Date().toISOString();
 
     // limpiar bloqueos vencidos
     await supabase.from("bloqueos").delete().lt("expires_at", ahora);
@@ -406,10 +406,10 @@ app.post("/bloquear", async (req, res) => {
       .select("*")
       .eq("asiento", asiento)
       .eq("fecha", fecha)
-      .eq("hora", hora)
+      .like("hora", hora + "%")
       .gt("expires_at", ahora);
 
-    if (data.length > 0) {
+    if (data && data.length > 0) {
       return res.status(400).json({ error: "Asiento ocupado" });
     }
 
@@ -419,7 +419,7 @@ app.post("/bloquear", async (req, res) => {
         asiento,
         fecha,
         hora,
-        expires_at: new Date(Date.now() + 2 * 60 * 1000)
+        expires_at: new Date(Date.now() + 2 * 60 * 1000).toISOString()
       }
     ]);
 
