@@ -140,6 +140,11 @@ const correo = params.get("correo");
 const fecha = params.get("fecha");
 const hora = params.get("hora");
 const precio = params.get("precio");
+function obtenerHoraBase(origen, hora) {
+  return hora;
+}
+
+const HORA_BASE = obtenerHoraBase(origen, hora);
 
 // mostrar info
 document.getElementById("viaje").innerText =
@@ -193,13 +198,6 @@ async function pagar() {
         alert("Selecciona un asiento");
         return;
     }
-
-    // 🔥 función hora base
-    function obtenerHoraBase(origen, hora) {
-    return hora;
-}
-
-    const HORA_BASE = obtenerHoraBase(origen, hora);
 
     // 🔒 bloquear asiento
     const res = await fetch("/bloquear", {
