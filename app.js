@@ -235,12 +235,13 @@ app.get("/tarifa", (req, res) => {
 app.get("/asientos", async (req, res) => {
   try {
     const { fecha, hora } = req.query;
-   
+    const bus_id = obtenerBus(hora);
+
     const { data, error } = await supabase
       .from("ventas")
       .select("asiento")
       .eq("fecha", fecha)
-      .eq("hora" , hora)
+      .eq("hora" , bus_id)
 
     if (error) {
       console.log("ERROR SUPABASE:", error);
