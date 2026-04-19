@@ -121,10 +121,9 @@ h2 {
 </div>
 
 <script>
-
 // 🔹 obtener parámetros de la URL
-
 const params = new URLSearchParams(window.location.search);
+
 let origen = params.get("origen");
 let destino = params.get("destino");
 
@@ -136,17 +135,13 @@ if (destino) localStorage.setItem("destino", destino);
 if (!origen) origen = localStorage.getItem("origen");
 if (!destino) destino = localStorage.getItem("destino");
 
-
 const nombre = params.get("nombre");
 const correo = params.get("correo");
 const fecha = params.get("fecha");
 const hora = params.get("hora");
 const precio = params.get("precio");
 
-
-
-
-
+// mostrar info
 document.getElementById("viaje").innerText =
 `Viaje desde ${origen} hacia ${destino}
 Pasajero: ${nombre}
@@ -154,24 +149,21 @@ Correo: ${correo}
 Fecha: ${fecha}
 Hora: ${hora}`;
 
-// 🔹 asientos ocupados (ejemplo)
-
-
+// 🔹 asientos
 let asientoSeleccionado = null;
-
 const bus = document.getElementById("bus");
 
-fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
+// cargar asientos
+fetch(/asientos?fecha=${fecha}&hora=${hora})
 .then(res => res.json())
 .then(data => {
-
-    const bus = document.getElementById("bus");
     bus.innerHTML = "";
 
     data.forEach((a, index) => {
 
         if ((index % 4) === 2) {
             const pasillo = document.createElement("div");
+            pasillo.classList.add("pasillo");
             bus.appendChild(pasillo);
         }
 
@@ -184,105 +176,96 @@ fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
             asiento.style.pointerEvents = "none";
         } else {
             asiento.onclick = () => {
-                document.querySelectorAll(".asiento").forEach(el =>
-                    el.classList.remove("seleccionado")
-                );
-
+                document.querySelectorAll(".asiento").forEach(el => el.classList.remove("seleccionado"));
                 asiento.classList.add("seleccionado");
                 asientoSeleccionado = a.numero;
-
-                document.getElementById("infoAsiento").innerText =
-                    "Asiento " + a.numero;
+                document.getElementById("infoAsiento").innerText = "Asiento " + a.numero;
             };
         }
 
         bus.appendChild(asiento);
     });
-
 });
 
-
+// 🔹 pagar con bloqueo real
 async function pagar() {
-  if (!asientoSeleccionado) {
-    alert("Selecciona un asiento");
-    return;
-  }
-
-  
-  const horaSeleccionada = params.get("hora");
-
-  function obtenerHoraBase(origen, hora) {
-
-    const base = horarios.semana.Tolten_Temuco;
-
-    if (origen === "Tolten") return hora;
-
-    let listaOrigen = [];
-
-    if (origen === "Hualpin") listaOrigen = horarios.semana.Hualpin_Temuco;
-    if (origen === "Teodoro Schmidt") listaOrigen = horarios.semana.TeodoroSchmidt_Temuco;
-    if (origen === "Barros Arana") listaOrigen = horarios.semana.BarrosArana_Temuco;
-
-    for (let i = 0; i < listaOrigen.length; i++) {
-      if (listaOrigen[i] === hora) {
-        return base[i];
-      }
+    if (!asientoSeleccionado) {
+        alert("Selecciona un asiento");
+        return;
     }
 
-    return hora;
-  }
+    // 🔥 función hora base
+    function obtenerHoraBase(origen, hora) {
+        const base = horarios.semana.Tolten_Temuco;
 
-  const HORA_BASE = obtenerHoraBase(origen, horaSeleccionada);
+        if (origen === "Tolten") return hora;
 
-  const res = await fetch("https://buses-vientosur.onrender.com/bloquear", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      asiento: asientoSeleccionado,
-      fecha: params.get("fecha"),
-      hora: HORA_BASE
+        let lista = [];
+
+        if (origen === "Hualpin") lista = horarios.semana.Hualpin_Temuco;
+        if (origen === "Teodoro Schmidt") lista = horarios.semana.TeodoroSchmidt_Temuco;
+        if (origen === "Barros Arana") lista = horarios.semana.BarrosArana_Temuco;
+
+        for (let i = 0; i < lista.length; i++) {
+            if (lista[i] === hora) {
+                return base[i];
+            }
+        }
+
+        return hora;
+    }
+
+    const HORA_BASE = obtenerHoraBase(origen, hora);
+
+    // 🔒 bloquear asiento
+    const res = await fetch("/bloquear", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            asiento: asientoSeleccionado,
+            fecha: fecha,
+            hora: HORA_BASE
+        })
+    });
+
+    if (!res.ok) {
+        alert("Asiento ocupado, elige otro");
+        return;
+    }
+
+    // respaldo datos
+    let origenFinal = origen;
+    let destinoFinal = destino;
+
+    if (!origenFinal) origenFinal = localStorage.getItem("origen");
+    if (!destinoFinal) destinoFinal = localStorage.getItem("destino");
+
+    // 💳 pagar
+    fetch("/pagar", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            nombre: nombre,
+            correo: correo,
+            origen: origenFinal,
+            destino: destinoFinal,
+            precio: precio,
+            fecha: fecha,
+            hora: HORA_BASE,
+            asiento: asientoSeleccionado
+        })
     })
-  });
-
-  if (!res.ok) {
-    alert("Asiento ocupado, elige otro");
-    return;
-  }
+    .then(res => res.json())
+    .then(data => {
+        window.location.href = data.init_point;
+    });
 }
-  
-  let origenFinal = origen;
-  
-  
-
-  // 🔥 los guardamos para el resto del flujo
-  if (!origenFinal) origenFinal = localStorage.getItem("origen");
-  if (!destino) destino = localStorage.getItem("destino");
-
-  fetch("https://buses-vientosur.onrender.com/pagar", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      nombre: nombre,
-      correo: correo,
-      origen: origenFinal,
-      destino: destino,
-      precio: precio,
-      fecha: params.get("fecha"),
-      hora: HORA_BASE,
-      asiento: asientoSeleccionado
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    window.location.href = data.init_point;
-  });
-}  
-
 </script>
+       
 
 </body>
 </html>
