@@ -221,6 +221,7 @@ app.get("/estudiante", (req, res) => {
 // 💰 OBTENER TARIFA
 app.get("/tarifa", (req, res) => {
   const { origen, destino } = req.query;
+  const bus_id = obtenerBus(hora);
 
   const clave = `${origen}_${destino}`;
   const precio = tarifas[clave];
@@ -240,7 +241,7 @@ app.get("/asientos", async (req, res) => {
       .from("ventas")
       .select("asiento")
       .eq("fecha", fecha)
-      .eq("hora", hora);
+      .eq("bus_id", bus_id)
 
     if (error) {
       console.log("ERROR SUPABASE:", error);
