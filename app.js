@@ -21,11 +21,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 
 async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento) {
-  console.log("📩 Enviando correo a:", correo);
+  console.log("📧 Enviando correo a:", correo);
 
   try {
 
-    // 🔹 GENERAR PDF
+    // 🧾 GENERAR PDF
     const archivo = await generarPDF({
       nombre,
       origen,
@@ -35,40 +35,48 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
       asiento
     });
 
-    // 🔹 ENVIAR CORREO CON PDF ADJUNTO
+    // 📄 LEER PDF
+    const pdfBuffer = require("fs").readFileSync(archivo);
+
+    // 📧 HTML DEL CORREO
+    const html = `
+      <h2>🚌 Boleto Buses VientoSur</h2>
+      <p>Gracias por preferir Buses VientoSur.</p>
+      <p>Te deseamos un excelente viaje.</p>
+      <hr/>
+      <p><strong>Nombre:</strong> ${nombre}</p>
+      <p><strong>Ruta:</strong> ${origen} - ${destino}</p>
+      <p><strong>Fecha:</strong> ${fecha}</p>
+      <p><strong>Hora:</strong> ${hora}</p>
+      <p><strong>Asiento:</strong> ${asiento}</p>
+      <br/>
+      <p>Preséntate 20 minutos antes de la salida.</p>
+      <p>Este boleto es válido solo para el horario indicado.</p>
+    `;
+
+    // 📤 ENVIAR CORREO CON PDF
+    await resend.emails.send({
+      from: "Buses VientoSur <ventas@busesvientosur.cl>",
+      to: correo,
+      subject: "Tu pasaje Buses VientoSur",
+      html: html,
+      attachments: [
+        {
+          filename: "boleto.pdf",
+          content: pdfBuffer.toString("base64")
+        }
+      ]
+    });
+
+    console.log("✅ CORREO ENVIADO CON PDF");
+
+  } catch (error) {
+    console.error("❌ ERROR enviando correo:", error);
+  }
+}
     
 
-// leer PDF
-const pdfBuffer = fs.readFileSync(archivo);
 
-// HTML mejorado
-const html = `
-  <h2>🚌 Boleto Buses VientoSur</h2>
-  <p>Gracias por preferirnos. Te deseamos un excelente viaje.</p>
-  <hr/>
-  <p><strong>Nombre:</strong> ${nombre}</p>
-  <p><strong>Ruta:</strong> ${origen} - ${destino}</p>
-  <p><strong>Fecha:</strong> ${fecha}</p>
-  <p><strong>Hora:</strong> ${hora}</p>
-  <p><strong>Asiento:</strong> ${asiento}</p>
-  <br/>
-  <p>Preséntate 20 minutos antes de la salida.</p>
-  <p>Este boleto es válido solo para el horario indicado.</p>
-`;
-
-await resend.emails.send({
-  from: "Buses VientoSur <ventas@busesvientosur.cl>",
-  to: correo,
-  subject: "Tu pasaje Buses VientoSur",
-  html: html,
-
-  attachments: [
-    {
-      filename: "boleto.pdf",
-      content: pdfBuffer.toString("base64") // ✅ ESTA ES LA SOLUCIÓN
-    }
-  ]
-});
  
 
 
