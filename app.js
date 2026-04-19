@@ -412,19 +412,40 @@ app.post("/webhook", async (req, res) => {
 
       const datos = JSON.parse(payment.external_reference || "{}");
 
+      // VALIDACIÓN
+      if (
+        !datos.nombre ||
+        !datos.origen ||
+        !datos.destino ||
+        !datos.fecha ||
+        !datos.hora ||
+        !datos.asiento ||
+        !datos.correo
+      ) {
+        console.log("❌ DATOS INCOMPLETOS:", datos);
+        return res.sendStatus(400);
+      }
+
+      // INSERT SUPABASE
       const { error } = await supabase.from("ventas").insert([
         {
           asiento: Number(datos.asiento),
           fecha: datos.fecha,
           hora: datos.hora,
           nombre: datos.nombre,
-          ruta: datos.origen + " - " + datos.destino,
+          ruta: ${datos.origen} - ${datos.destino},
           estado: "pagado"
         }
       ]);
 
-      if (error) console.log("ERROR SUPABASE:", error);
+      if (error) {
+        console.log("❌ ERROR SUPABASE:", error.message);
+        return res.sendStatus(500);
+      }
 
+      console.log("✅ GUARDADO EN SUPABASE");
+
+      // CORREO
       enviarCorreoSMTP(
         datos.correo,
         datos.nombre,
@@ -435,6 +456,7 @@ app.post("/webhook", async (req, res) => {
         datos.asiento
       );
 
+      // FETCH (USA TU MISMA URL QUE YA TENÍAS)
       await fetch("https://script.google.com/macros/s/AKfycbwXAjjmKEZ4jqj3f58MmifBTgRqT9nKxyuQ9tT1C3vPN44ka-K1PRMAkTZR1s3Ft__7/exec", {
         method: "POST",
         headers: {
@@ -452,11 +474,10 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    res.sendStatus(200);
-
+    return res.sendStatus(200);
   } catch (error) {
     console.log("ERROR WEBHOOK:", error);
-    res.sendStatus(500);
+    return res.sendStatus(500);
   }
 });
    
