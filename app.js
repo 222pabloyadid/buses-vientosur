@@ -216,7 +216,7 @@ app.get("/asientos", async (req, res) => {
     const { fecha, hora } = req.query;
 
     const { data, error } = await supabase
-      .from("ventas")
+      .from("bloqueos")
       .select("asiento")
       .eq("fecha", fecha)
       .eq("hora", hora);
@@ -393,6 +393,37 @@ app.post("/webhook", async (req, res) => {
           estado: "pagado"
         }
       ]);
+
+// 🔒 BLOQUEAR TODO EL BUS
+
+// 1. buscar bus de la hora comprada
+const { data: busData } = await supabase
+  .from("mapa_buses")
+  .select("bus_id")
+  .eq("hora", datos.hora)
+  .single();
+if (!busData) {
+  console.log("NO SE ENCONTRÓ BUS:", datos.hora);
+  return res.sendStatus(200);
+}
+
+
+// 2. traer todas las horas de ese bus
+const { data: horasBus } = await supabase
+  .from("mapa_buses")
+  .select("hora")
+  .eq("bus_id", busData.bus_id);
+
+// 3. crear bloqueos
+const bloqueos = horasBus.map(h => ({
+  asiento: Number(datos.asiento),
+  fecha: datos.fecha,
+  hora: h.hora
+}));
+
+// 4. guardar bloqueos
+await supabase.from("bloqueos").insert(bloqueos);
+
 
       if (error) console.log("ERROR SUPABASE:", error);
 
