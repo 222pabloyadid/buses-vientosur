@@ -2,7 +2,8 @@
 
 const express = require("express");
 const fs = require('fs');
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core");
+const chromium = require("chrome-aws-lambda");
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -52,8 +53,10 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 
 async function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
   const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+  args: chromium.args,
+  executablePath: await chromium.executablePath,
+  headless: chromium.headless
+});
 
   const page = await browser.newPage();
 
