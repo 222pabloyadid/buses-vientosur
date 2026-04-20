@@ -21,7 +21,7 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 
   try {
     // generar PDF
-    const archivoPDF = generarPDF(nombre, origen, destino, fecha, hora, asiento);
+    const archivoPDF = await generarPDF(nombre, origen, destino, fecha, hora, asiento);
 
     await resend.emails.send({
       from: "Buses VientoSur <ventas@busesvientosur.cl>",
@@ -51,22 +51,28 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
  
 
 function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
+  return new Promise((resolve, reject) => {
+    const file = "boleto_" + Date.now() + ".pdf";
+    const doc = new PDFDocument();
 
-  const file = "boleto_" + Date.now() + ".pdf";
-  const doc = new PDFDocument();
+    const stream = fs.createWriteStream(file);
+    doc.pipe(stream);
 
-  doc.pipe(fs.createWriteStream(file));
+    doc.text("Buses VientoSur");
+    doc.text("Nombre: " + nombre);
+    doc.text("Ruta: " + origen + " - " + destino);
+    doc.text("Fecha: " + fecha);
+    doc.text("Hora: " + hora);
+    doc.text("Asiento: " + asiento);
 
-  doc.text("Buses VientoSur");
-  doc.text("Nombre: " + nombre);
-  doc.text("Ruta: " + origen + " - " + destino);
-  doc.text("Fecha: " + fecha);
-  doc.text("Hora: " + hora);
-  doc.text("Asiento: " + asiento);
+    doc.end();
 
-  doc.end();
+    stream.on("finish", () => {
+      resolve(file); // 👈 recién aquí existe el archivo
+    });
 
-  return file;
+    stream.on("error", reject);
+  });
 }
 
 const { MercadoPagoConfig, Preference } = require("mercadopago");
