@@ -248,7 +248,7 @@ app.get("/asientos", async (req, res) => {
 });
 
 
-// ⏳ RESERVA TEMPORAL (2 min)
+// ⏳ RESERVA TEMPORAL
 app.post("/reservar", async (req, res) => {
   const { asiento, fecha, hora } = req.body;
 
@@ -271,20 +271,7 @@ app.post("/reservar", async (req, res) => {
   res.json({ ok: true });
 });
 
-    const ocupados = data.map(v => v.asiento);
-
-    console.log("OCUPADOS:", ocupados);
-
-    const asientos = [];
-
-    for (let i = 1; i <= 29; i++) {
-      asientos.push({
-        numero: i,
-        ocupado: ocupados.includes(i)
-      });
-    }
-
-    res.json(asientos);
+    
 
   } catch (err) {
     console.log("ERROR /asientos:", err);
