@@ -430,7 +430,7 @@ app.post("/webhook", async (req, res) => {
       ]);
 
 // 🔒 BLOQUEAR TODO EL BUS
-
+datos.hora = datos.hora.slice(0,5);
 // 1. buscar bus de la hora comprada
 const { data: busData } = await supabase
   .from("mapa_buses")
