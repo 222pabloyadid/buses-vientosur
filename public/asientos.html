@@ -202,7 +202,7 @@ fetch(`/asientos?fecha=${fecha}&hora=${hora}`)
 });
 
 
-function pagar() {
+async function pagar() {
   if (!asientoSeleccionado) {
     alert("Selecciona un asiento");
     return;
@@ -222,7 +222,21 @@ function pagar() {
   localStorage.setItem("origen", origen);
   localStorage.setItem("destino", destino);
 
-  fetch("https://buses-vientosur.onrender.com/pagar", {
+
+const fecha = params.get("fecha");
+const hora = params.get("hora");
+
+await fetch("https://buses-vientosur.onrender.com/reservar", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    asiento: asientoSeleccionado,
+    fecha: fecha,
+    hora: hora
+  })
+});
+
+  await fetch("https://buses-vientosur.onrender.com/pagar", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
