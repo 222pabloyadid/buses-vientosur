@@ -252,6 +252,7 @@ app.get("/asientos", async (req, res) => {
 app.post("/reservar", async (req, res) => {
   const { asiento, fecha, hora } = req.body;
 
+  console.log("RESERVANDO:", asiento, fecha, hora);
   const expira = new Date(Date.now() + 2 * 60 * 1000);
 
   const { error } = await supabase.from("bloqueos").insert([
