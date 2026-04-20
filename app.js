@@ -333,6 +333,25 @@ app.post("/pagar", async (req, res) => {
   }
 });
 
+app.get("/asientos", async (req, res) => {
+  const { fecha, hora } = req.query;
+
+  const { data, error } = await supabase
+    .from("bloqueos")
+    .select("asiento")
+    .eq("fecha", fecha)
+    .eq("hora", hora);
+
+  if (error) {
+    console.log("ERROR BLOQUEOS:", error);
+    return res.status(500).json({ error: "error consultando bloqueos" });
+  }
+
+  res.json({
+    ocupados: data.map(a => a.asiento)
+  });
+});
+
 app.get('/bus', (req, res) => {
     const { fecha, hora } = req.query;
 
