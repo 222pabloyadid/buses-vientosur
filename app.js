@@ -185,6 +185,7 @@ app.get("/estudiante", (req, res) => {
   const rut = req.query.rut;
 
   const estudiante = estudiantes[rut];
+
   if (estudiante) {
     res.json({
       ok: true,
@@ -197,7 +198,8 @@ app.get("/estudiante", (req, res) => {
   }
 });
 
-// 💰 OBTENER TARIFA
+
+// 🔥 OBTENER TARIFA
 app.get("/tarifa", (req, res) => {
   const { origen, destino } = req.query;
 
@@ -210,7 +212,7 @@ app.get("/tarifa", (req, res) => {
 });
 
 
-// 🪑 ASIENTOS (29)
+// 🪑 ASIENTOS
 app.get("/asientos", async (req, res) => {
   try {
     const { fecha, hora } = req.query;
@@ -219,12 +221,55 @@ app.get("/asientos", async (req, res) => {
       .from("bloqueos")
       .select("asiento")
       .eq("fecha", fecha)
-      .eq("hora", hora);
+      .eq("hora", hora)
+      .or(expires_at.is.null,expires_at.gt.${new Date().toISOString()});
 
     if (error) {
       console.log("ERROR SUPABASE:", error);
       return res.json([]);
     }
+
+    const ocupados = data.map(v => v.asiento);
+
+    const asientos = [];
+    for (let i = 1; i <= 29; i++) {
+      asientos.push({
+        numero: i,
+        ocupado: ocupados.includes(i)
+      });
+    }
+
+    res.json(asientos);
+
+  } catch (err) {
+    console.log("ERROR /asientos:", err);
+    res.json([]);
+  }
+});
+
+
+// ⏳ RESERVA TEMPORAL (2 min)
+app.post("/reservar", async (req, res) => {
+  const { asiento, fecha, hora } = req.body;
+
+  const expira = new Date(Date.now() + 2 * 60 * 1000);
+
+  const { error } = await supabase.from("bloqueos").insert([
+    {
+      asiento,
+      fecha,
+      hora,
+      expires_at: expira
+    }
+  ]);
+
+  if (error) {
+    console.log("ERROR RESERVA:", error);
+    return res.status(500).json({ error: "error reservando" });
+  }
+
+  res.json({ ok: true });
+});
 
     const ocupados = data.map(v => v.asiento);
 
