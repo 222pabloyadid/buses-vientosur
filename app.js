@@ -119,6 +119,23 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
     doc.moveDown(1);
 
     // 💬 MENSAJES
+
+    doc.moveDown(1);
+
+    doc.fillColor("red")
+       .fontSize(10)
+       .text("⚠️ IMPORTANTE", { align: "center" });
+
+    doc.moveDown(0.5);
+
+    doc.fillColor("#000")
+       .fontSize(9)
+       .text("Es obligación del pasajero presentarse 20 minutos antes de la salida del bus.", { align: "center" });
+
+    doc.text("En caso de que el bus se adelante, la salida puede realizarse con hasta 20 minutos de anticipación.", { align: "center" });
+
+    doc.text("No se realizan devoluciones ni reembolsos de pasajes.", { align: "center" });
+
     doc.fontSize(9).fillColor("#555");
 
     doc.text("Preséntate 20 minutos antes", { align: "center" });
