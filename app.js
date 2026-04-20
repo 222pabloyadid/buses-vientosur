@@ -54,8 +54,8 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 async function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
   const browser = await puppeteer.launch({
   args: chromium.args,
-  executablePath: await chromium.executablePath,
-  headless: chromium.headless
+  executablePath: await chromium.executablePath || '/usr/bin/chromium',
+  headless: true
 });
 
   const page = await browser.newPage();
