@@ -464,16 +464,27 @@ app.get("/asientos", async (req, res) => {
   });
 });
 
-app.get('/bus', (req, res) => {
-    const { fecha, hora } = req.query;
+app.get("/bus", async (req, res) => {
+  const { fecha, hora } = req.query;
 
-    const ventas = JSON.parse(fs.readFileSync('ventas.json', 'utf8'));
+  try {
+    const { data, error } = await supabase
+      .from("ventas")
+      .select("*")
+      .eq("fecha", fecha)
+      .gte("hora", hora)
+      .lt("hora", hora + ":59");
 
-    const filtrados = ventas.filter(v => 
-      v.fecha == fecha && v.hora.substring(0,5) == hora.substring(0,5)
-    );
+    if (error) {
+      console.log("ERROR BUS:", error);
+      return res.json([]);
+    }
 
-    res.json(filtrados);
+    res.json(data || []);
+  } catch (err) {
+    console.log("ERROR GENERAL:", err);
+    res.json([]);
+  }
 });
 
 app.post("/webhook", async (req, res) => {
