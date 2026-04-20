@@ -2,7 +2,7 @@
 
 const express = require("express");
 const fs = require('fs');
-const PDFDocument = require("pdfkit");
+const puppeteer = require("puppeteer");
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -50,29 +50,110 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 }
  
 
-function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
-  return new Promise((resolve, reject) => {
-    const file = "boleto_" + Date.now() + ".pdf";
-    const doc = new PDFDocument();
-
-    const stream = fs.createWriteStream(file);
-    doc.pipe(stream);
-
-    doc.text("Buses VientoSur");
-    doc.text("Nombre: " + nombre);
-    doc.text("Ruta: " + origen + " - " + destino);
-    doc.text("Fecha: " + fecha);
-    doc.text("Hora: " + hora);
-    doc.text("Asiento: " + asiento);
-
-    doc.end();
-
-    stream.on("finish", () => {
-      resolve(file); // 👈 recién aquí existe el archivo
-    });
-
-    stream.on("error", reject);
+async function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
+
+  const page = await browser.newPage();
+
+  const html = `
+  <html>
+  <head>
+    <style>
+      body {
+        font-family: Arial;
+        background: #f4f4f4;
+        padding: 20px;
+      }
+
+      .ticket {
+        width: 500px;
+        background: white;
+        border: 2px dashed #333;
+        border-radius: 10px;
+        padding: 20px;
+      }
+
+      .logo {
+        text-align: center;
+      }
+
+      .logo img {
+        width: 140px;
+      }
+
+      .title {
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        margin-top: 10px;
+      }
+
+      .box {
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 8px;
+      }
+
+      .big {
+        font-size: 26px;
+        text-align: center;
+        font-weight: bold;
+      }
+
+      .footer {
+        margin-top: 15px;
+        font-size: 12px;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="ticket">
+
+      <div class="logo">
+        <img src="https://buses-vientosur.onrender.com/logo.png" />
+      </div>
+
+      <div class="title">BOLETO DE VIAJE</div>
+
+      <div class="box">
+        <b>Nombre:</b> ${nombre}<br/>
+        <b>Ruta:</b> ${origen} - ${destino}<br/>
+        <b>Fecha:</b> ${fecha}<br/>
+        <b>Hora:</b> ${hora}
+      </div>
+
+      <div class="box big">
+        ASIENTO ${asiento}
+      </div>
+
+      <div class="footer">
+        Preséntate 20 minutos antes de la salida<br/>
+        Gracias por preferir Buses VientoSur
+      </div>
+
+    </div>
+  </body>
+  </html>
+  `;
+
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+
+  const file = "boleto.pdf";
+
+  await page.pdf({
+    path: file,
+    format: "A4",
+    printBackground: true
+  });
+
+  await browser.close();
+
+  return file;
 }
 
 const { MercadoPagoConfig, Preference } = require("mercadopago");
