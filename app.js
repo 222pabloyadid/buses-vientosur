@@ -222,7 +222,7 @@ app.get("/asientos", async (req, res) => {
       .select("asiento")
       .eq("fecha", fecha)
       .eq("hora", hora)
-      .or(expires_at.is.null,expires_at.gt.${new Date().toISOString()});
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
 
     if (error) {
       console.log("ERROR SUPABASE:", error);
