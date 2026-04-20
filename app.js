@@ -2,8 +2,7 @@
 
 const express = require("express");
 const fs = require('fs');
-const puppeteer = require("puppeteer-core");
-const chromium = require("chrome-aws-lambda");
+const PDFDocument = require("pdfkit");
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -51,113 +50,101 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 }
  
 
-async function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
-  const browser = await puppeteer.launch({
-  args: chromium.args,
-  executablePath: await chromium.executablePath || '/usr/bin/chromium',
-  headless: true
-});
+function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
+  return new Promise((resolve, reject) => {
 
-  const page = await browser.newPage();
+    const file = "boleto_" + Date.now() + ".pdf";
+    const doc = new PDFDocument({ size: "A6", margin: 20 });
 
-  const html = `
-  <html>
-  <head>
-    <style>
-      body {
-        font-family: Arial;
-        background: #f4f4f4;
-        padding: 20px;
-      }
+    const stream = fs.createWriteStream(file);
+    doc.pipe(stream);
 
-      .ticket {
-        width: 500px;
-        background: white;
-        border: 2px dashed #333;
-        border-radius: 10px;
-        padding: 20px;
-      }
+    // 🎨 FONDO
+    doc.rect(0, 0, 300, 420).fill("#f4f4f4");
 
-      .logo {
-        text-align: center;
-      }
+    // 🎫 TARJETA
+    doc.roundedRect(10, 10, 280, 400, 10).fill("#ffffff");
 
-      .logo img {
-        width: 140px;
-      }
+    // 🚌 LOGO (opcional)
+    try {
+      doc.image("public/logo.png", 90, 20, { width: 120 });
+    } catch (e) {}
 
-      .title {
-        text-align: center;
-        font-size: 20px;
-        font-weight: bold;
-        margin-top: 10px;
-      }
+    doc.moveDown(3);
 
-      .box {
-        border: 1px solid #ddd;
-        padding: 10px;
-        margin-top: 10px;
-        border-radius: 8px;
-      }
+    // 🔷 ENCABEZADO
+    doc.fillColor("#000");
+    doc.fontSize(16).text("Buses VientoSur", { align: "center" });
+    doc.fontSize(10).fillColor("#555")
+       .text("Pasaje Electrónico", { align: "center" });
 
-      .big {
-        font-size: 26px;
-        text-align: center;
-        font-weight: bold;
-      }
+    doc.moveDown(1);
 
-      .footer {
-        margin-top: 15px;
-        font-size: 12px;
-        text-align: center;
-      }
-    </style>
-  </head>
+    // 🔹 LÍNEA
+    doc.moveTo(30, 80).lineTo(270, 80).dash(3, { space: 3 }).stroke();
 
-  <body>
-    <div class="ticket">
+    doc.moveDown(1);
 
-      <div class="logo">
-        <img src="https://buses-vientosur.onrender.com/logo.png" />
-      </div>
+    // 📄 DATOS
+    doc.fillColor("#000").fontSize(11);
 
-      <div class="title">BOLETO DE VIAJE</div>
+    doc.text("Nombre: " + nombre);
+    doc.text("Asiento: " + asiento);
 
-      <div class="box">
-        <b>Nombre:</b> ${nombre}<br/>
-        <b>Ruta:</b> ${origen} - ${destino}<br/>
-        <b>Fecha:</b> ${fecha}<br/>
-        <b>Hora:</b> ${hora}
-      </div>
+    doc.moveDown(0.5);
 
-      <div class="box big">
-        ASIENTO ${asiento}
-      </div>
+    doc.fontSize(12);
+    doc.text("Origen: " + origen);
+    doc.text("Destino: " + destino);
 
-      <div class="footer">
-        Preséntate 20 minutos antes de la salida<br/>
-        Gracias por preferir Buses VientoSur
-      </div>
+    doc.moveDown(0.5);
 
-    </div>
-  </body>
-  </html>
-  `;
+    doc.fontSize(11);
+    doc.text("Fecha: " + fecha);
+    doc.text("Hora: " + hora);
+    doc.text("Duración: 2:30 hrs");
 
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+    doc.moveDown(1);
 
-  const file = "boleto.pdf";
+    // 🔥 ASIENTO GRANDE
+    doc.fontSize(18)
+       .fillColor("#000")
+       .text("ASIENTO " + asiento, { align: "center" });
 
-  await page.pdf({
-    path: file,
-    format: "A4",
-    printBackground: true
+    doc.moveDown(1);
+
+    // 🔹 LÍNEA
+    doc.moveTo(30, 250).lineTo(270, 250).dash(3, { space: 3 }).stroke();
+
+    doc.moveDown(1);
+
+    // 💬 MENSAJES
+    doc.fontSize(9).fillColor("#555");
+
+    doc.text("Preséntate 20 minutos antes", { align: "center" });
+    doc.text("Gracias por preferir BusesVientoSur", { align: "center" });
+    doc.text("Que tengas un excelente día", { align: "center" });
+
+    doc.moveDown(0.5);
+    doc.text("Saludos equipo VientoSur", { align: "center" });
+
+    doc.moveDown(1);
+
+    // ⚠️ NOTA FINAL
+    doc.fontSize(8).fillColor("#777");
+
+    doc.text(
+      "Asiento clásico. Recuerda guardar tus pertenencias dentro del bus, son de exclusiva responsabilidad del pasajero.",
+      { align: "center" }
+    );
+
+    doc.end();
+
+    stream.on("finish", () => resolve(file));
+    stream.on("error", reject);
   });
-
-  await browser.close();
-
-  return file;
 }
+  
 
 const { MercadoPagoConfig, Preference } = require("mercadopago");
 
