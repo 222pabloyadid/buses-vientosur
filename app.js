@@ -271,13 +271,6 @@ app.post("/reservar", async (req, res) => {
   res.json({ ok: true });
 });
 
-    
-
-  } catch (err) {
-    console.log("ERROR /asientos:", err);
-    res.json([]);
-  }
-});
 
 app.post("/comprar", async (req, res) => {
   const { fecha, hora, asiento } = req.body;
