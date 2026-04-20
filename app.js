@@ -17,9 +17,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 
 async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento) {
-  console.log("📨 Enviando correo a:", correo);
+  console.log("📧 Enviando correo a:", correo);
 
   try {
+    // generar PDF
+    const archivoPDF = generarPDF(nombre, origen, destino, fecha, hora, asiento);
+
     await resend.emails.send({
       from: "Buses VientoSur <ventas@busesvientosur.cl>",
       to: correo,
@@ -31,12 +34,18 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
         <p>Fecha: ${fecha}</p>
         <p>Hora: ${hora}</p>
         <p>Asiento: ${asiento}</p>
-      `
+      `,
+      attachments: [
+        {
+          filename: "boleto.pdf",
+          content: require("fs").readFileSync(archivoPDF)
+        }
+      ]
     });
 
-    console.log("✅ CORREO ENVIADO");
+    console.log(" CORREO ENVIADO");
   } catch (error) {
-    console.log("❌ ERROR CORREO:", error);
+    console.log(" ERROR CORREO:", error);
   }
 }
  
