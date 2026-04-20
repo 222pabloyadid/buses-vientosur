@@ -78,7 +78,8 @@ function verBus() {
         texto += "Total pasajeros: " + data.length + "\n\n";
 
         data.forEach(p => {
-            texto += "Asiento " + p.asiento + " - " + (p.nombre || "Sin nombre") + "\n";
+          texto += "Asiento " + p.asiento + " - " + (p.nombre || "Sin nombre") + "\n";
+          texto += "Ruta: " + (p.ruta || "Sin ruta") + "\n\n";
         });
 
         ultimoTexto = texto;
