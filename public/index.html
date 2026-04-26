@@ -13,10 +13,7 @@
 <h1>🚌 Buses VientoSur</h1>
 
 <h2>Buscar Pasajes</h2>
-<label>RUT Estudiante:</label>
-<input type="text" id="rut" placeholder="Ingresa tu RUT">
-<button onclick="buscarEstudiante()">Buscar Estudiante</button>
-<br><br>
+
 
 <label>Nombre:</label>
 <input type="text" id="nombre" placeholder="Tu nombre">
@@ -140,29 +137,6 @@ document.getElementById("horarioSelect").addEventListener("change", (e) => {
   
 }
 
-async function buscarEstudiante() {
-  const rut = document.getElementById("rut").value;
-
-  const res = await fetch(`/estudiante?rut=${rut}`);
-  const data = await res.json();
-
-  if (data.ok) {
-    const est = data.estudiante;
-
-    document.getElementById("origen").value = est.origen;
-
-    actualizarDestinos();
-
-    document.getElementById("destino").value = est.destino;
-
-    document.getElementById("resultado").innerText =
-      "Estudiante: " + est.nombre +
-      "\nPrecio especial: $" + est.precio;
-
-  } else {
-    alert("Estudiante no encontrado");
-  }
-}
 
 actualizarDestinos();
 function irAAsientos() {
