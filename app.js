@@ -1,6 +1,7 @@
 
 
 const express = require("express");
+const cors = require("cors");
 const fs = require('fs');
 const PDFDocument = require("pdfkit");
 const fetch = require('node-fetch');
@@ -171,6 +172,11 @@ const client = new MercadoPagoConfig({
 });
 
 const app = express();
+app.use(cors({
+  origin: ["https://busevientosur.cl", "https://www.busevientosur.cl"],
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
+}));
 app.use(express.json());
 
 app.use(express.static("public"));
