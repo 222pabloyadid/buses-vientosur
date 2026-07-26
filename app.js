@@ -417,9 +417,15 @@ app.get("/admin/bloquear", (req, res) => {
 
 app.post("/pagar", async (req, res) => {
   try {
-    const { nombre, correo, origen, destino, precio, fecha, hora, asiento } = req.body;
-
-    if (!precio || !fecha || !hora || !asiento) {
+    const { nombre, correo, origen, destino, fecha, hora, asiento } = req.body;
+   
+    const clave = ${origen}_${destino};
+    const precio = tarifas[clave];
+    
+    if (!precio) {
+      return res.status(400).json({ error: "Ruta sin tarifa" });
+    }
+    if (!fecha || !hora || !asiento) {
       return res.status(400).json({ error: "Faltan datos" });
     }
 
