@@ -226,7 +226,7 @@ async function pagar() {
 const fecha = params.get("fecha");
 const hora = params.get("hora");
 
-await fetch("https://buses-vientosur.onrender.com/reservar", {
+await fetch("/reservar", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -236,7 +236,7 @@ await fetch("https://buses-vientosur.onrender.com/reservar", {
   })
 });
 
-  await fetch("https://buses-vientosur.onrender.com/pagar", {
+  await fetch("/pagar", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
