@@ -186,7 +186,7 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
 const { MercadoPagoConfig, Preference } = require("mercadopago");
 
 const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN
+  accessToken: "APP_USR-5882389343621419-033114-27702d8456f4112a891c237be1845d00-2591372650"
 });
 
 
