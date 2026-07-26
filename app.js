@@ -419,7 +419,7 @@ app.post("/pagar", async (req, res) => {
   try {
     const { nombre, correo, origen, destino, fecha, hora, asiento } = req.body;
    
-    const clave = ${origen}_${destino};
+    const clave = `${origen}_${destino}`;
     const precio = tarifas[clave];
     
     if (!precio) {
