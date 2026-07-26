@@ -12,6 +12,25 @@ const supabase = createClient(
   process.env.SUPABASE_KEY
 );
 
+let bloqueados = [];
+
+async function cargarBloqueos() {
+  const { data, error } = await supabase
+    .from("horarios_bloqueados")
+    .select("hora");
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  bloqueados = data.map(x => x.hora);
+  console.log("Bloqueos cargados:", bloqueados);
+}
+
+cargarBloqueos();
+
+
 
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -187,7 +206,7 @@ app.use(express.static(__dirname));
 const horarios = require("./horarios.js");
 const tarifas = require("./tarifas.js");
 const estudiantes = require("./data/estudiantes");
-const bloqueados = require("./bloqueos.js");
+//const bloqueados = require("./bloqueos.js");
 const filtrarPorTiempo = require("./filtroTiempo.js");
 const { guardarVenta } = require("./ventas.js");
 
@@ -397,7 +416,7 @@ app.post("/comprar", async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/admin/bloquear", (req, res) => {
+app.get("/admin/bloquear", async (req, res) => {
   const { hora, key } = req.query;
 
   if (key !== "1234") {
@@ -409,9 +428,31 @@ app.get("/admin/bloquear", (req, res) => {
   }
 
   if (!bloqueados.includes(hora)) {
-    bloqueados.push(hora);
+    await supabase
+      .from("horarios_bloqueados")
+      .insert({ hora });
+  
+    await cargarBloqueos();
   }
   
+  
+  res.json({ ok: true, bloqueados });
+});
+
+app.get("/admin/desbloquear", async (req, res) => {
+  const { hora, key } = req.query;
+
+  if (key !== "1234") {
+    return res.json({ ok: false, error: "No autorizado" });
+}
+
+  await supabase
+    .from("horarios_bloqueados")
+    .delete()
+    .eq("hora", hora);
+
+  await cargarBloqueos();
+
   res.json({ ok: true, bloqueados });
 });
 
