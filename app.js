@@ -591,6 +591,21 @@ app.post("/webhook", async (req, res) => {
 // 🔒 BLOQUEAR TODO EL BUS
 datos.hora = datos.hora.slice(0,5);
 // 1. buscar bus de la hora comprada
+// Convertir paradas intermedias al recorrido principal
+if (
+  datos.origen === "Temuco" &&
+  ["Lolen", "Paradero21", "LasDichas", "Limite", "BarrosArana", "Paradero31", "TeodoroSchmidt", "Hualpin"].includes(datos.destino)
+) {
+  datos.destino = "Tolten";
+}
+
+if (
+  datos.destino === "Temuco" &&
+  ["Lolen", "Paradero21", "LasDichas", "Limite", "BarrosArana", "Paradero31", "TeodoroSchmidt", "Hualpin"].includes(datos.origen)
+) {
+  datos.origen = "Tolten";
+}
+
 const sentido = `${datos.origen}_${datos.destino}`.replace(/\s+/g, "");
 
 const { data: busData } = await supabase
