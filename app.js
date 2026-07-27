@@ -605,6 +605,10 @@ if (
 ) {
   datos.origen = "Tolten";
 }
+if (datos.destino === "Pitrufquen") {
+  datos.destino = "Temuco";
+}
+
 
 const sentido = `${datos.origen}_${datos.destino}`.replace(/\s+/g, "");
 
