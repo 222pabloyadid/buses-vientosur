@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VientoSur | Conductor</title>
+<style>
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#edf3f8;
+  color:#173451;
+}
+main {
+  max-width:420px;
+  margin:45px auto;
+  padding:24px;
+}
+.panel {
+  background:white;
+  padding:28px 22px;
+  border-radius:18px;
+  box-shadow:0 8px 25px #12345615;
+}
+.logo {
+  display:block;
+  width:105px;
+  margin:0 auto 15px;
+}
+h2 { text-align:center; }
+input,button {
+  width:100%;
+  padding:15px;
+  margin-top:12px;
+  border-radius:10px;
+  font-size:16px;
+}
+input { border:1px solid #ccd5df; }
+button {
+  border:0;
+  background:#123c60;
+  color:white;
+  font-weight:bold;
+}
+#error {
+  color:#b91c1c;
+  text-align:center;
+  margin-top:15px;
+}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<img src="/logo.png" class="logo" alt="VientoSur">
+<h2>Ingreso de conductor</h2>
+
+<form id="login">
+<input id="usuario" placeholder="Usuario" required>
+<input id="password" type="password"
+placeholder="Contraseña" required>
+<button id="entrar" type="submit">INGRESAR</button>
+</form>
+
+<p id="error" role="alert"></p>
+</section>
+</main>
+
+<script>
+const formulario = document.getElementById("login");
+const errorElemento = document.getElementById("error");
+const boton = document.getElementById("entrar");
+
+formulario.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  boton.disabled = true;
+  errorElemento.textContent = "";
+
+  try {
+    const respuesta = await fetch("/api/conductor/login", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        usuario:document.getElementById("usuario").value.trim(),
+        password:document.getElementById("password").value
+      })
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok || !datos.ok) {
+      throw new Error(datos.mensaje || "No se pudo ingresar");
+    }
+
+    sessionStorage.setItem("vientosur_conductor_token",datos.token);
+    location.href="/panel-conductor.html";
+
+  } catch (error) {
+    errorElemento.textContent=error.message;
+    boton.disabled=false;
+  }
+});
+</script>
+</body>
+</html>

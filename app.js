@@ -263,10 +263,22 @@ const app = express();
 app.use(cors({
   origin: ["https://busesvientosur.cl", "https://www.busesvientosur.cl"],
   methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"]
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(express.json());
+
+app.use(
+  "/api/conductor",
+  require("./conductores.js")(supabase)
+);
+
+app.use(
+  "/api/admin/conductores",
+  require("./admin-conductores.js")(supabase)
+);
+
+
 
 app.use(express.static("public"));
 app.use(express.static(__dirname));

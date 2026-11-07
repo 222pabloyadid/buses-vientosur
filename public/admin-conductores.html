@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administración de Conductores | VientoSur</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#172b4d}
+header{background:#123c70;color:white;padding:22px;text-align:center}
+main{max-width:650px;margin:25px auto;padding:15px}
+section{background:white;border-radius:15px;padding:22px;margin-bottom:20px;box-shadow:0 3px 12px #0001}
+h2{margin-top:0}
+input{display:block;width:100%;padding:13px;margin:12px 0;border:1px solid #cbd5e1;border-radius:9px;font-size:16px}
+button{background:#1456a0;color:white;border:0;border-radius:9px;padding:13px 18px;font-size:16px;cursor:pointer}
+button:disabled{opacity:.5}
+.conductor{padding:13px 0;border-bottom:1px solid #e2e8f0}
+small{color:#64748b}
+#panel{display:none}
+#mensaje{min-height:24px}
+</style>
+</head>
+<body>
+<header>
+<h1>BUSES VIENTOSUR</h1>
+<p>Administración de conductores</p>
+</header>
+
+<main>
+<section id="acceso">
+<h2>Acceso administrador</h2>
+<input id="claveAdmin" type="password" placeholder="Contraseña administrativa" autocomplete="off">
+<button id="entrar">INGRESAR</button>
+</section>
+
+<div id="panel">
+<section>
+<h2>Registrar conductor</h2>
+<form id="formConductor">
+<input id="nombre" placeholder="Nombre completo" required minlength="3" maxlength="100">
+<input id="usuario" placeholder="Usuario de acceso" required minlength="4" maxlength="40">
+<input id="password" type="password" placeholder="Contraseña (mínimo 12 caracteres)" required minlength="12">
+<button type="submit">CREAR CONDUCTOR</button>
+</form>
+</section>
+
+<section>
+<h2>Conductores registrados</h2>
+<div id="lista"></div>
+<button id="actualizar">ACTUALIZAR LISTA</button>
+</section>
+
+<button id="salir">CERRAR ADMINISTRACIÓN</button>
+</div>
+
+<p id="mensaje" role="status"></p>
+</main>
+
+<script>
+let clave = "";
+
+async function solicitar(ruta, opciones = {}) {
+  const respuesta = await fetch("/api/admin/conductores/" + ruta, {
+    ...opciones,
+    headers: {
+      "Authorization": "Bearer " + clave,
+      ...(opciones.headers || {})
+    },
+    cache: "no-store"
+  });
+
+  const datos = await respuesta.json();
+
+  if (!respuesta.ok || !datos.ok) {
+    throw new Error(datos.mensaje || "Operación no autorizada");
+  }
+
+  return datos;
+}
+
+function aviso(texto) {
+  document.getElementById("mensaje").textContent = texto;
+}
+
+async function cargarConductores() {
+  const datos = await solicitar("listar");
+  const lista = document.getElementById("lista");
+  lista.replaceChildren();
+
+  for (const conductor of datos.conductores) {
+    const elemento = document.createElement("div");
+    elemento.className = "conductor";
+
+    const nombre = document.createElement("strong");
+    nombre.textContent = conductor.nombre;
+
+    const detalle = document.createElement("div");
+    detalle.textContent =
+      "Usuario: " + conductor.usuario +
+      " | " + (conductor.activo ? "Habilitado" : "Deshabilitado");
+
+    elemento.append(nombre, detalle);
+    lista.appendChild(elemento);
+  }
+
+  if (!datos.conductores.length) {
+    lista.textContent = "Todavía no hay conductores registrados.";
+  }
+}
+
+document.getElementById("entrar").onclick = async () => {
+  clave = document.getElementById("claveAdmin").value;
+  try {
+    await cargarConductores();
+    document.getElementById("claveAdmin").value = "";
+    document.getElementById("acceso").style.display = "none";
+    document.getElementById("panel").style.display = "block";
+    aviso("");
+  } catch (error) {
+    clave = "";
+    aviso(error.message);
+  }
+};
+
+document.getElementById("formConductor").onsubmit = async evento => {
+  evento.preventDefault();
+  const boton = evento.submitter;
+  boton.disabled = true;
+
+  try {
+    await solicitar("crear", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        nombre: document.getElementById("nombre").value.trim(),
+        usuario: document.getElementById("usuario").value.trim(),
+        password: document.getElementById("password").value
+      })
+    });
+
+    document.getElementById("formConductor").reset();
+    await cargarConductores();
+    aviso("Conductor registrado correctamente.");
+  } catch (error) {
+    aviso(error.message);
+  } finally {
+    boton.disabled = false;
+  }
+};
+
+document.getElementById("actualizar").onclick = async () => {
+  try {
+    await cargarConductores();
+    aviso("Lista actualizada.");
+  } catch (error) {
+    aviso(error.message);
+  }
+};
+
+document.getElementById("salir").onclick = () => {
+  clave = "";
+  document.getElementById("panel").style.display = "none";
+  document.getElementById("acceso").style.display = "block";
+  aviso("");
+};
+</script>
+</body>
+</html>

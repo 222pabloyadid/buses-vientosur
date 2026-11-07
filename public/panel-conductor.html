@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VientoSur | Panel conductor</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#edf3f8;font-family:Arial,sans-serif;color:#173451}
+main{max-width:450px;margin:auto;padding:18px}
+header{background:#123c60;color:white;padding:22px;text-align:center;border-radius:15px}
+section{background:white;padding:20px;margin-top:15px;border-radius:15px}
+select,button{width:100%;padding:14px;margin-top:12px;border-radius:10px;font-size:16px}
+select{border:1px solid #ccd5df;background:white}
+button{border:0;background:#123c60;color:white;font-weight:bold}
+button:disabled{opacity:.5}
+.total{font-size:35px;font-weight:bold;text-align:center}
+small{color:#64748b}
+#mensaje{margin-top:12px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h2>🚌 VIENTOSUR</h2>
+<p id="nombre">Panel del conductor</p>
+</header>
+
+<section>
+<h3>Mi recorrido</h3>
+<label for="ruta">Ruta</label>
+<select id="ruta">
+<option value="">Seleccionar ruta</option>
+</select>
+<label for="hora">Horario habilitado</label>
+<select id="hora">
+<option value="">Seleccionar horario</option>
+</select>
+<button id="iniciar" disabled>INICIAR RECORRIDO</button>
+<p id="mensaje" role="status"></p>
+<button id="finalizar" disabled>FINALIZAR RECORRIDO</button>
+</section>
+
+<section>
+<h3>Validación de boletos</h3>
+<button id="escanear" disabled>ESCANEAR QR</button>
+<small>Disponible al iniciar el recorrido.</small>
+</section>
+
+<section>
+<h3>GPS del recorrido</h3>
+<button id="gps" disabled>ACTIVAR GPS</button>
+<p id="estadoGPS">GPS desactivado</p>
+</section>
+
+<section>
+<h3>Producción de hoy</h3>
+<div class="total" id="total">$0</div>
+<p id="cantidad">0 boletos validados</p>
+<button id="descargar" disabled>DESCARGAR PRODUCCIÓN</button>
+</section>
+
+<section>
+<button id="salir">CERRAR SESIÓN</button>
+</section>
+</main>
+
+<script>
+const token=sessionStorage.getItem("vientosur_conductor_token");
+if(!token)location.replace("/conductor.html");
+
+
+const ruta = document.getElementById("ruta");
+const hora = document.getElementById("hora");
+const mensaje = document.getElementById("mensaje");
+
+let horariosDisponibles = {};
+
+async function cargarHorarios() {
+  try {
+    const respuesta = await fetch("/api/conductor/horarios", {
+      headers: {
+        Authorization: "Bearer " + token
+      },
+      cache: "no-store"
+    });
+
+    if (!respuesta.ok) {
+      throw new Error("No se pudieron cargar los horarios");
+    }
+
+    const datos = await respuesta.json();
+    horariosDisponibles = datos.horarios || {};
+
+    ruta.innerHTML = '<option value="">Seleccionar ruta</option>';
+
+    Object.keys(horariosDisponibles).forEach(clave => {
+      const opcion = document.createElement("option");
+      opcion.value = clave;
+      opcion.textContent = clave.replaceAll("_", " - ");
+      ruta.appendChild(opcion);
+    });
+
+    mensaje.textContent = "Selecciona tu recorrido y horario.";
+
+  } catch (error) {
+    mensaje.textContent = error.message;
+  }
+}
+
+ruta.addEventListener("change", () => {
+  hora.innerHTML = '<option value="">Seleccionar horario</option>';
+
+  (horariosDisponibles[ruta.value] || []).forEach(item => {
+    const valor = typeof item === "string" ? item : item.hora;
+    const opcion = document.createElement("option");
+    opcion.value = valor;
+    opcion.textContent = valor + " hrs";
+    hora.appendChild(opcion);
+  });
+
+  document.getElementById("iniciar").disabled = !hora.value;
+});
+
+hora.addEventListener("change", () => {
+  document.getElementById("iniciar").disabled = !hora.value;
+});
+
+async function verificarSesion(){
+  try{
+    const res=await fetch("/api/conductor/yo",{
+      headers:{Authorization:"Bearer "+token}
+    });
+    if(!res.ok)throw new Error();
+    const datos=await res.json();
+    document.getElementById("nombre").textContent=
+      datos.conductor.nombre;
+  }catch{
+    sessionStorage.removeItem("vientosur_conductor_token");
+    location.replace("/conductor.html");
+  }
+}
+
+
+let recorridoActivo = null;
+
+document.getElementById("iniciar").onclick = async () => {
+  const boton = document.getElementById("iniciar");
+
+  if (!ruta.value || !hora.value || recorridoActivo) return;
+
+  boton.disabled = true;
+  mensaje.textContent = "Iniciando recorrido...";
+
+  try {
+    const respuesta = await fetch("/api/conductor/iniciar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({
+        ruta: ruta.value,
+        hora: hora.value
+      })
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok || !datos.ok) {
+      throw new Error(datos.mensaje || "No se pudo iniciar");
+    }
+
+    recorridoActivo = datos.recorrido_id;
+    document.getElementById("gps").disabled = false;
+    document.getElementById("escanear").disabled = false;
+    document.getElementById("finalizar").disabled = false;
+
+    ruta.disabled = true;
+    hora.disabled = true;
+
+    boton.textContent = "RECORRIDO INICIADO";
+
+    mensaje.textContent =
+      "Recorrido iniciado: " + hora.value + " hrs";
+
+  } catch (error) {
+    mensaje.textContent = error.message;
+    boton.disabled = false;
+  }
+};
+
+
+function mostrarRecorridoActivo(recorrido) {
+  recorridoActivo = recorrido.id;
+  document.getElementById("gps").disabled = false;
+  document.getElementById("escanear").disabled = false;
+
+  ruta.disabled = true;
+  hora.disabled = true;
+
+  document.getElementById("iniciar").disabled = true;
+  document.getElementById("iniciar").textContent =
+    "RECORRIDO INICIADO";
+
+  document.getElementById("finalizar").disabled = false;
+
+  mensaje.textContent =
+    "Recorrido activo: " + recorrido.hora + " hrs";
+}
+
+async function recuperarRecorrido() {
+  try {
+    const respuesta = await fetch(
+      "/api/conductor/recorrido-activo",
+      {
+        headers: {
+          Authorization: "Bearer " + token
+        },
+        cache: "no-store"
+      }
+    );
+
+    if (!respuesta.ok) return;
+
+    const datos = await respuesta.json();
+
+    if (datos.recorrido) {
+      mostrarRecorridoActivo(datos.recorrido);
+    }
+  } catch (error) {
+    console.error("Error recuperando recorrido:", error);
+  }
+}
+
+document.getElementById("finalizar").onclick = async () => {
+  if (!recorridoActivo) return;
+
+  const boton = document.getElementById("finalizar");
+  boton.disabled = true;
+
+  try {
+    const respuesta = await fetch("/api/conductor/finalizar", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token
+      }
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok || !datos.ok) {
+      throw new Error("No se pudo finalizar");
+    }
+
+    recorridoActivo = null;
+    detenerGPSConductor();
+    document.getElementById("gps").disabled = true;
+    await cerrarCamaraQR();
+    document.getElementById("escanear").disabled = true;
+
+    ruta.disabled = false;
+    hora.disabled = false;
+
+    document.getElementById("iniciar").textContent =
+      "INICIAR RECORRIDO";
+
+    document.getElementById("iniciar").disabled =
+      !ruta.value || !hora.value;
+
+    mensaje.textContent = "Recorrido finalizado.";
+
+  } catch (error) {
+    mensaje.textContent = error.message;
+    boton.disabled = false;
+  }
+};
+
+document.getElementById("salir").onclick=()=>{
+  sessionStorage.removeItem("vientosur_conductor_token");
+  location.replace("/conductor.html");
+};
+
+verificarSesion();
+cargarHorarios();
+recuperarRecorrido();
+</script>
+
+<div id="lector-qr" style="display:none; padding:15px">
+  <h3>Escanear boleto del pasajero</h3>
+  <div id="camara-qr" style="max-width:400px"></div>
+  <p id="resultado-qr"></p>
+  <button id="cerrar-qr" type="button">CERRAR CÁMARA</button>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+let lectorQR = null;
+let procesandoQR = false;
+
+async function cerrarCamaraQR() {
+  if (lectorQR) {
+    try {
+      await lectorQR.stop();
+    } catch (_) {}
+    try {
+      lectorQR.clear();
+    } catch (_) {}
+    lectorQR = null;
+  }
+  document.getElementById("lector-qr").style.display = "none";
+}
+
+document.getElementById("cerrar-qr").onclick = cerrarCamaraQR;
+
+document.getElementById("escanear").onclick = async () => {
+  if (!recorridoActivo) {
+    alert("Primero debes iniciar un recorrido.");
+    return;
+  }
+
+  if (lectorQR) return;
+
+  document.getElementById("lector-qr").style.display = "block";
+  document.getElementById("resultado-qr").textContent =
+    "Apunta la cámara al código QR del boleto.";
+
+  try {
+    lectorQR = new Html5Qrcode("camara-qr");
+
+    await lectorQR.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      async (codigo) => {
+        if (procesandoQR) return;
+        procesandoQR = true;
+
+        try {
+          await lectorQR.pause();
+
+          const respuesta = await fetch("/api/conductor/validar-qr", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + token
+            },
+            body: JSON.stringify({
+              codigo_qr: codigo,
+              recorrido_id: recorridoActivo
+            })
+          });
+
+          const datos = await respuesta.json();
+
+          document.getElementById("resultado-qr").textContent =
+            datos.ok
+              ? "BOLETO VÁLIDO - $" +
+                Number(datos.precio).toLocaleString("es-CL")
+              : "BOLETO RECHAZADO: " +
+                (datos.mensaje || "No válido");
+
+          if (datos.ok) {
+            await actualizarProduccion();
+            await cerrarCamaraQR();
+          } else if (lectorQR) {
+            lectorQR.resume();
+          }
+
+        } catch (error) {
+          document.getElementById("resultado-qr").textContent =
+            "Error al validar boleto.";
+          if (lectorQR) {
+            try { lectorQR.resume(); } catch (_) {}
+          }
+        } finally {
+          procesandoQR = false;
+        }
+      },
+      () => {}
+    );
+  } catch (error) {
+    alert("No se pudo abrir la cámara.");
+    await cerrarCamaraQR();
+  }
+};
+</script>
+
+<script>
+async function actualizarProduccion() {
+  const tokenProduccion = sessionStorage.getItem(
+    "vientosur_conductor_token"
+  );
+
+  if (!tokenProduccion) return;
+
+  try {
+    const respuesta = await fetch("/api/conductor/produccion", {
+      headers: {
+        Authorization: "Bearer " + tokenProduccion
+      },
+      cache: "no-store"
+    });
+
+    if (!respuesta.ok) return;
+
+    const datos = await respuesta.json();
+
+    if (!datos.ok) return;
+
+    document.getElementById("total").textContent =
+      "$" + Number(datos.total || 0).toLocaleString("es-CL");
+
+    document.getElementById("cantidad").textContent =
+      Number(datos.cantidad || 0);
+
+    document.getElementById("descargar").disabled = false;
+
+  } catch (error) {
+    console.error("Error consultando producción:", error);
+  }
+}
+
+actualizarProduccion();
+
+setInterval(actualizarProduccion, 30000);
+</script>
+
+
+<script>
+document.getElementById("descargar").addEventListener("click", async () => {
+  const boton = document.getElementById("descargar");
+  boton.disabled = true;
+
+  try {
+    const token = sessionStorage.getItem("vientosur_conductor_token");
+
+    const [respuestaProduccion, respuestaConductor] = await Promise.all([
+      fetch("/api/conductor/produccion", {
+        headers: { Authorization: "Bearer " + token },
+        cache: "no-store"
+      }),
+      fetch("/api/conductor/yo", {
+        headers: { Authorization: "Bearer " + token },
+        cache: "no-store"
+      })
+    ]);
+
+    if (!respuestaProduccion.ok || !respuestaConductor.ok) {
+      throw new Error("No se pudieron consultar los datos.");
+    }
+
+    const produccion = await respuestaProduccion.json();
+    const perfil = await respuestaConductor.json();
+
+    if (!produccion.ok || !perfil.ok) {
+      throw new Error("No se pudo generar el comprobante.");
+    }
+
+    const nombre = perfil.conductor?.nombre || "Conductor";
+    const fecha = produccion.fecha;
+    const cantidad = Number(produccion.cantidad || 0);
+    const total = Number(produccion.total || 0);
+
+    const escapar = valor => String(valor).replace(
+      /[&<>"']/g,
+      caracter => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[caracter]
+    );
+
+    const ventana = window.open("", "_blank");
+
+    if (!ventana) {
+      throw new Error("Permite las ventanas emergentes para descargar.");
+    }
+
+    ventana.document.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>Producción diaria VientoSur</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 35px; }
+          h1 { color: #17365d; }
+          .dato { margin: 16px 0; font-size: 18px; }
+          .total { font-size: 28px; font-weight: bold; }
+          @media print {
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>BUSES VIENTOSUR</h1>
+        <h2>Comprobante de producción diaria</h2>
+        <div class="dato"><b>Conductor:</b> ${escapar(nombre)}</div>
+        <div class="dato"><b>Fecha:</b> ${escapar(fecha)}</div>
+        <div class="dato"><b>Boletos validados:</b> ${cantidad}</div>
+        <div class="dato total">
+          Total producido: $${total.toLocaleString("es-CL")}
+        </div>
+        <p>Producción registrada mediante validación de boletos QR.</p>
+        <button onclick="window.print()">GUARDAR COMO PDF / IMPRIMIR</button>
+      
+<script>
+let vigilanciaGPSConductor = null;
+let enviandoGPSConductor = false;
+
+function detenerGPSConductor() {
+  if (vigilanciaGPSConductor !== null) {
+    navigator.geolocation.clearWatch(vigilanciaGPSConductor);
+    vigilanciaGPSConductor = null;
+  }
+
+  const boton = document.getElementById("gps");
+  boton.textContent = "ACTIVAR GPS";
+}
+
+function iniciarGPSConductor() {
+  if (!recorridoActivo) {
+    alert("Primero debes iniciar un recorrido.");
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert("Este celular no admite geolocalización.");
+    return;
+  }
+
+  if (vigilanciaGPSConductor !== null) return;
+
+  const boton = document.getElementById("gps");
+  boton.textContent = "ACTIVANDO GPS...";
+
+  vigilanciaGPSConductor = navigator.geolocation.watchPosition(
+    async posicion => {
+      boton.textContent = "GPS ACTIVO";
+
+      if (enviandoGPSConductor || !recorridoActivo) return;
+
+      enviandoGPSConductor = true;
+
+      try {
+        const tokenGPS = sessionStorage.getItem(
+          "vientosur_conductor_token"
+        );
+
+        const respuesta = await fetch("/api/conductor/ubicacion", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + tokenGPS
+          },
+          body: JSON.stringify({
+            latitud: posicion.coords.latitude,
+            longitud: posicion.coords.longitude
+          })
+        });
+
+        if (!respuesta.ok) {
+          console.error("No se pudo guardar la ubicación.");
+        }
+      } catch (error) {
+        console.error("Error enviando GPS:", error);
+      } finally {
+        enviandoGPSConductor = false;
+      }
+    },
+    error => {
+      console.error("Error GPS:", error);
+      detenerGPSConductor();
+      alert("No se pudo obtener la ubicación. Revisa los permisos del celular.");
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 20000
+    }
+  );
+}
+
+document.getElementById("gps").addEventListener("click", () => {
+  if (vigilanciaGPSConductor !== null) {
+    detenerGPSConductor();
+  } else {
+    iniciarGPSConductor();
+  }
+});
+</script>
+
+</body>
+      </html>
+    `);
+
+    ventana.document.close();
+
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    boton.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>
