@@ -1,101 +1,190 @@
-/* BODY */
+
+:root {
+  --azul: #102c54;
+  --verde: #008f89;
+  --fondo: #f3f6fa;
+  --borde: #dce4ed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(to bottom, #00c6ff, #0072ff);
-
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background: var(--fondo);
+  color: #172b46;
 }
 
-/* CONTENEDOR */
-.container {
-    width: 100%;
-    max-width: 100%;
-    margin-top: 30px;   
-    padding-top: 40px;  
-    padding-left: 25px;
-    padding-right: 25px;
-    padding-bottom: 25px;
-    background: transparent;
-    border-radius: 0;
-    
+.cabecera {
+  background: white;
+  padding: 25px 16px;
+  text-align: center;
+  border-bottom: 1px solid #e5eaf0;
 }
 
-/* TITULOS */
-h1 {
-    text-align: center;
-    font-size: 26px;
-    margin-bottom: 10px;
-}
-
-h2 {
-    text-align: center;
-    font-size: 20px;
-    margin-bottom: 20px;
-}
-
-/* CAMPOS */
-label {
-    display: block;
-    margin-top: 20px;
-    margin-bottom: 5px;
-    font-weight: bold;
-    font-size: 16px;
-}
-
-/* INPUTS MODERNOS */
-input, select {
-    width: 100%;
-    padding: 18px;
-    font-size: 18px;
-    border-radius: 12px;
-    border: 2px solid transparent;
-    outline: none;
-    box-sizing: border-box;
-    transition: all 0.3s ease;
-}
-
-input[type="date"] {
-    width: 95%;
-}
-
-
-
-/* EFECTO AL PASAR */
-input:hover, select:hover {
-    transform: scale(1.01);
-}
-
-/* EFECTO AL TOCAR */
-input:focus, select:focus {
-    border: 2px solid #0072ff;
-    box-shadow: 0 0 10px rgba(0,114,255,0.4);
-    transform: scale(1.02);
-}
-
-/* BOTONES PRO */
-button {
-    width: 100%;
-    padding: 18px;
-    margin-top: 25px;
-    border: none;
-    border-radius: 12px;
-    background: #0072ff;
-    color: white;
-    font-size: 18px;
-    font-weight: bold;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-
-/* EFECTO CLICK */
-button:active {
-    transform: scale(0.97);
-}
 .logo {
-    display: block;
-    margin: 90px auto 80px auto;
-    width: 400px;
+  display: block;
+  width: 230px;
+  max-width: 80%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.cabecera p {
+  color: #60738c;
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin: 10px 0 0;
+}
+
+.contenedor {
+  width: calc(100% - 32px);
+  max-width: 650px;
+  margin: 28px auto;
+}
+
+.tarjeta {
+  overflow: hidden;
+  background: white;
+  border-radius: 22px;
+  border: 1px solid #e7ecf3;
+  box-shadow: 0 10px 35px rgba(16,44,84,.08);
+}
+
+.encabezado {
+  padding: 30px 20px;
+  background: var(--azul);
+  text-align: center;
+  color: white;
+}
+
+.encabezado span {
+  color: #73d9d6;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+h1 {
+  font-size: 28px;
+  margin: 12px 0;
+}
+
+.encabezado p {
+  color: #d7e5f4;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.formulario {
+  padding: 24px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  margin: 18px 0 8px;
+}
+
+input, select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--borde);
+  border-radius: 11px;
+  background: #f9fbfd;
+  color: #172b46;
+  font-size: 16px;
+  outline: none;
+}
+
+input:focus, select:focus {
+  border-color: var(--verde);
+  box-shadow: 0 0 0 3px rgba(0,143,137,.12);
+}
+
+.rutas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+button {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-radius: 11px;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 12px;
+}
+
+.buscar {
+  background: #1262c5;
+  margin-top: 26px;
+}
+
+.continuar {
+  background: var(--verde);
+  margin-top: 16px;
+}
+
+button:active {
+  transform: scale(.99);
+}
+
+.resultado:empty {
+  display: none;
+}
+
+.resultado:not(:empty) {
+  margin-top: 20px;
+  padding: 18px;
+  background: #f5f8fc;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+}
+
+.resultado h3 {
+  font-size: 16px;
+  margin-top: 0;
+}
+
+.resultado p {
+  font-weight: bold;
+  color: var(--azul);
+}
+
+.frase {
+  text-align: center;
+  font-size: 13px;
+  color: #60738c;
+  margin: 25px 0;
+}
+
+footer {
+  text-align: center;
+  padding: 16px 12px 28px;
+  font-size: 12px;
+  color: #718097;
+}
+
+@media (max-width: 380px) {
+  .formulario {
+    padding: 18px;
+  }
+
+  .rutas {
+    grid-template-columns: 1fr;
+  }
 }

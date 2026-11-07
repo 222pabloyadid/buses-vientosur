@@ -1,61 +1,79 @@
-<!DOCTYnPE html>
-<html>
+<!DOCTYPE html>
+<html lang="es">
 <head>
-
-  <title>Buses VientoSur</title>
-  <link rel="stylesheet" href="/styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buses VientoSur | Pasajes</title>
+<link rel="stylesheet" href="/styles.css">
 </head>
-
 <body>
-<div class="container">
-<img src="/logo.png" class="logo">
 
-<h1>🚌 Buses VientoSur</h1>
+<header class="cabecera">
+<img src="/logo.png" class="logo" alt="Buses VientoSur">
+<p>Tu viaje comienza aquí</p>
+</header>
 
-<h2>Buscar Pasajes</h2>
+<main class="contenedor">
+<section class="tarjeta">
 
+<div class="encabezado">
+<span>VIAJA CON NOSOTROS</span>
+<h1>Compra tu pasaje</h1>
+<p>Consulta horarios, tarifas y elige tu asiento</p>
+</div>
 
-<label>Nombre:</label>
-<input type="text" id="nombre" placeholder="Tu nombre">
+<div class="formulario">
 
-<br><br>
+<label for="nombre">Nombre del pasajero</label>
+<input id="nombre" type="text" placeholder="Ingresa tu nombre" autocomplete="name">
 
-<label>Correo:</label>
-<input type="email" id="correo" placeholder="tu@email.com">
+<label for="correo">Correo electrónico</label>
+<input id="correo" type="email" placeholder="tu@email.com" autocomplete="email">
 
-
-<br><br>
-
-<label>Origen:</label>
+<div class="rutas">
+<div>
+<label for="origen">Origen</label>
 <select id="origen" onchange="actualizarDestinos()">
-  <option>Tolten</option>
-  <option>Hualpin</option>
-  <option>TeodoroSchmidt</option>
-  <option>BarrosArana</option>
-  <option>Temuco</option>
+<option>Tolten</option>
+<option>Hualpin</option>
+<option>TeodoroSchmidt</option>
+<option>BarrosArana</option>
+<option>Temuco</option>
 </select>
+</div>
 
-<br><br>
-
-<label>Destino:</label>
+<div>
+<label for="destino">Destino</label>
 <select id="destino">
-  <option>Temuco</option>
-  <option>Freire</option>
-  <option>Pitrufquen</option>
+<option>Temuco</option>
+<option>Freire</option>
+<option>Pitrufquen</option>
 </select>
+</div>
+</div>
 
+<label for="fecha">Fecha de viaje</label>
+<input id="fecha" name="fecha" type="date">
 
-<br><br>
+<button class="buscar" onclick="buscar()">
+Buscar horarios
+</button>
 
-<label for="fecha">📅 Fecha de viaje:</label>
-<input type="date" id="fecha" name="fecha">
+<div id="resultado" class="resultado" aria-live="polite"></div>
 
-<br><br>
+<button class="continuar" onclick="irAAsientos()">
+Continuar a los asientos →
+</button>
 
-<button onclick="buscar()">Buscar Horarios</button>
+</div>
+</section>
 
-<h3 id="resultado"></h3>
-<button onclick="irAAsientos()">Continuar</button>
+<p class="frase">Viaja cómodo · Viaja seguro · Viaja VientoSur</p>
+</main>
+
+<footer>
+© 2026 Buses VientoSur · Creado por Pablo Yañez
+</footer>
 
 <script>
 function actualizarDestinos() {
@@ -178,11 +196,5 @@ function irAAsientos() {
 }
 
 </script>
-</div>
-
-<footer style="text-align:center; font-size:13px; color:#111; margin-top:10px; font-weight:500;">
-  © 2026 Buses VientoSur · Creado por Pablo Yañez
-</footer>
-
 </body>
 </html>
