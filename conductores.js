@@ -517,6 +517,168 @@ function crearRutasConductores(supabase) {
     }
   });
 
+
+  // Registrar incidencia del recorrido activo
+  router.post("/incidencia", async (req, res) => {
+    try {
+      const authorization = req.headers.authorization || "";
+      const token = authorization.startsWith("Bearer ")
+        ? authorization.slice(7).trim()
+        : "";
+
+      const sesion = sesiones.get(token);
+
+      if (!sesion || sesion.expira < Date.now()) {
+        return res.status(401).json({
+          ok: false,
+          mensaje: "Sesión vencida"
+        });
+      }
+
+      const motivo = String(req.body?.motivo || "");
+
+      if (!["falla_mecanica", "accidente", "otra"].includes(motivo)) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Motivo de incidencia inválido"
+        });
+      }
+
+      const { data: conductor, error: errorConductor } =
+        await supabase
+          .from("conductores")
+          .select("activo")
+          .eq("id", sesion.conductor_id)
+          .maybeSingle();
+
+      if (errorConductor) throw errorConductor;
+
+      if (!conductor?.activo) {
+        return res.status(403).json({
+          ok: false,
+          mensaje: "Conductor no habilitado"
+        });
+      }
+
+      const { data: recorrido, error: errorRecorrido } =
+        await supabase
+          .from("recorridos_conductor")
+          .select("id")
+          .eq("conductor_id", sesion.conductor_id)
+          .eq("estado", "activo")
+          .maybeSingle();
+
+      if (errorRecorrido) throw errorRecorrido;
+
+      if (!recorrido) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "No tienes un recorrido activo"
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("incidencias_conductor")
+        .insert({
+          recorrido_id: recorrido.id,
+          conductor_id: sesion.conductor_id,
+          motivo
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        if (error.code === "23505") {
+          return res.status(409).json({
+            ok: false,
+            mensaje: "Este recorrido ya tiene una incidencia reportada"
+          });
+        }
+        throw error;
+      }
+
+      // Asociar a la incidencia los boletos del recorrido afectado.
+      const { data: recorridoAfectado, error: errorDatos } =
+        await supabase
+          .from("recorridos_conductor")
+          .select("fecha,hora,origen,destino")
+          .eq("id", recorrido.id)
+          .single();
+
+      if (errorDatos) throw errorDatos;
+
+      const { data: ventasAfectadas, error: errorVentas } =
+        await supabase
+          .from("ventas")
+          .select("id,ruta")
+          .eq("fecha", recorridoAfectado.fecha)
+          .eq("hora", recorridoAfectado.hora)
+          .eq("estado", "pagado")
+          .is("validado_at", null)
+          .is("incidencia_id", null);
+
+      if (errorVentas) throw errorVentas;
+
+      const normalizar = texto =>
+        String(texto || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+
+      const origen = normalizar(recorridoAfectado.origen);
+      const destino = normalizar(recorridoAfectado.destino);
+
+      const paradasTolten = new Set([
+        "lolen", "arauco", "parada21", "lasdichas",
+        "limite", "barrosarana", "parada31",
+        "teodoroschmidt", "hualpin", "tolten"
+      ]);
+
+      const ids = (ventasAfectadas || [])
+        .filter(venta => {
+          const partes = String(venta.ruta || "").split(/\s+-\s+/);
+          if (partes.length !== 2) return false;
+
+          const salida = normalizar(partes[0]);
+          const llegada = normalizar(partes[1]);
+
+          if (origen === "temuco" && destino === "tolten") {
+            return salida === "temuco" &&
+              paradasTolten.has(llegada);
+          }
+
+          return salida === origen && llegada === destino;
+        })
+        .map(venta => venta.id);
+
+      if (ids.length) {
+        const { error: errorAsociacion } = await supabase
+          .from("ventas")
+          .update({ incidencia_id: data.id })
+          .in("id", ids)
+          .is("incidencia_id", null);
+
+        if (errorAsociacion) throw errorAsociacion;
+      }
+
+      return res.json({
+        ok: true,
+        incidencia_id: data.id,
+        boletos_afectados: ids.length,
+        mensaje: "Incidencia registrada. Administración será informada."
+      });
+
+    } catch (error) {
+      console.error("ERROR REGISTRANDO INCIDENCIA:", error);
+
+      return res.status(500).json({
+        ok: false,
+        mensaje: "No se pudo registrar la incidencia"
+      });
+    }
+  });
+
   // Producción diaria del conductor
   router.get("/produccion", async (req, res) => {
     try {

@@ -55,6 +55,25 @@ small{color:#64748b}
 </section>
 
 <section>
+<h3>🚨 Incidencias del recorrido</h3>
+<p>Utiliza esta opción si el bus presenta una falla, accidente u otro inconveniente.</p>
+
+<label for="motivoIncidencia">Motivo</label>
+<select id="motivoIncidencia">
+<option value="falla_mecanica">Falla mecánica / Bus en pana</option>
+<option value="accidente">Accidente</option>
+<option value="otra">Otra incidencia</option>
+</select>
+
+<button id="reportarIncidencia" type="button" disabled
+style="background:#b91c1c;color:white">
+🚨 REPORTAR INCIDENCIA
+</button>
+
+<p id="estadoIncidencia" role="status"></p>
+</section>
+
+<section>
 <h3>GPS del recorrido</h3>
 <button id="gps" disabled>ACTIVAR GPS</button>
 <p id="estadoGPS">GPS desactivado</p>
@@ -182,6 +201,7 @@ document.getElementById("iniciar").onclick = async () => {
     document.getElementById("gps").disabled = false;
     document.getElementById("escanear").disabled = false;
     document.getElementById("finalizar").disabled = false;
+  document.getElementById("reportarIncidencia").disabled = false;
 
     ruta.disabled = true;
     hora.disabled = true;
@@ -211,6 +231,7 @@ function mostrarRecorridoActivo(recorrido) {
     "RECORRIDO INICIADO";
 
   document.getElementById("finalizar").disabled = false;
+  document.getElementById("reportarIncidencia").disabled = false;
 
   mensaje.textContent =
     "Recorrido activo: " + recorrido.hora + " hrs";
@@ -698,6 +719,65 @@ setInterval(cargarPasajesVendidos, 15000);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) cargarPasajesVendidos();
 });
+</script>
+
+
+<script>
+async function enviarIncidenciaConductor() {
+  const boton = document.getElementById("reportarIncidencia");
+  const estado = document.getElementById("estadoIncidencia");
+  const motivo = document.getElementById("motivoIncidencia").value;
+
+  if (!confirm(
+    "¿Confirmas que deseas reportar una incidencia? " +
+    "La administración recibirá el aviso."
+  )) return;
+
+  boton.disabled = true;
+  estado.textContent = "Enviando incidencia...";
+
+  try {
+    const token = sessionStorage.getItem(
+      "vientosur_conductor_token"
+    );
+
+    const respuesta = await fetch("/api/conductor/incidencia", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token
+      },
+      body: JSON.stringify({ motivo })
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok || !datos.ok) {
+      if (respuesta.status === 409) {
+        estado.textContent =
+          "Esta incidencia ya fue reportada anteriormente.";
+        return;
+      }
+
+      throw new Error(
+        datos.mensaje || "No se pudo enviar la incidencia"
+      );
+    }
+
+    estado.textContent =
+      "✅ INCIDENCIA REGISTRADA. " +
+      "La administración podrá revisar el reporte.";
+
+    boton.textContent = "INCIDENCIA REPORTADA";
+
+  } catch (error) {
+    estado.textContent = "❌ " + error.message;
+    boton.disabled = false;
+  }
+}
+
+document.getElementById("reportarIncidencia")
+  .addEventListener("click", enviarIncidenciaConductor);
 </script>
 
 </body>

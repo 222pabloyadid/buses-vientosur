@@ -146,5 +146,82 @@ module.exports = function crearAdminConductores(supabase) {
     }
   });
 
+
+  // Consultar incidencias para administración
+  router.get("/incidencias", async (req, res) => {
+    try {
+      const { data: incidencias, error } = await supabase
+        .from("incidencias_conductor")
+        .select(
+          "id,recorrido_id,conductor_id,motivo,estado,creado_at"
+        )
+        .order("creado_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      const ids = [...new Set(
+        (incidencias || []).map(i => i.conductor_id)
+      )];
+
+      const recorridosIds = [...new Set(
+        (incidencias || []).map(i => i.recorrido_id)
+      )];
+
+      let conductores = [];
+      let recorridos = [];
+
+      if (ids.length) {
+        const resultado = await supabase
+          .from("conductores")
+          .select("id,nombre")
+          .in("id", ids);
+
+        if (resultado.error) throw resultado.error;
+        conductores = resultado.data || [];
+      }
+
+      if (recorridosIds.length) {
+        const resultado = await supabase
+          .from("recorridos_conductor")
+          .select("id,fecha,hora,origen,destino,latitud,longitud")
+          .in("id", recorridosIds);
+
+        if (resultado.error) throw resultado.error;
+        recorridos = resultado.data || [];
+      }
+
+      const mapaConductores = new Map(
+        conductores.map(c => [c.id, c])
+      );
+
+      const mapaRecorridos = new Map(
+        recorridos.map(r => [r.id, r])
+      );
+
+      const resultado = (incidencias || []).map(i => ({
+        ...i,
+        conductor: mapaConductores.get(i.conductor_id)?.nombre
+          || "Conductor desconocido",
+        recorrido: mapaRecorridos.get(i.recorrido_id) || null
+      }));
+
+      res.set("Cache-Control", "no-store");
+
+      return res.json({
+        ok: true,
+        incidencias: resultado
+      });
+
+    } catch (error) {
+      console.error("ERROR CONSULTANDO INCIDENCIAS:", error);
+
+      return res.status(500).json({
+        ok: false,
+        mensaje: "No se pudieron consultar las incidencias"
+      });
+    }
+  });
+
   return router;
 };

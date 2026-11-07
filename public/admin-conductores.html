@@ -58,7 +58,14 @@ small{color:#64748b}
 </section>
 
 
+
 <div id="panel">
+<section>
+<h2>🚨 INCIDENCIAS DE CONDUCTORES</h2>
+<p>Alertas de accidentes, fallas mecánicas y otros inconvenientes.</p>
+<div id="listaIncidencias">Consultando incidencias...</div>
+</section>
+
 <section>
 <h2>Ubicación de conductores</h2>
 <p>Toca un conductor para ver dónde viene su bus.</p>
@@ -370,6 +377,112 @@ document.getElementById("salir").addEventListener("click", () => {
     intervaloConductores = null;
   }
   conductorSeleccionado = null;
+});
+</script>
+
+
+<script>
+let consultandoIncidenciasAdmin = false;
+
+async function cargarIncidenciasAdmin() {
+  const panel = document.getElementById("panel");
+
+  if (
+    !clave ||
+    panel.style.display === "none" ||
+    consultandoIncidenciasAdmin
+  ) return;
+
+  consultandoIncidenciasAdmin = true;
+
+  const lista = document.getElementById("listaIncidencias");
+
+  try {
+    const datos = await solicitar("incidencias");
+    lista.replaceChildren();
+
+    const pendientes = (datos.incidencias || [])
+      .filter(i => i.estado !== "resuelta");
+
+    if (!pendientes.length) {
+      lista.textContent = "✅ No hay incidencias pendientes.";
+      return;
+    }
+
+    for (const incidencia of pendientes) {
+      const tarjeta = document.createElement("div");
+
+      tarjeta.style.cssText =
+        "background:#fff1f2;border:2px solid #dc2626;" +
+        "border-radius:12px;padding:15px;margin:12px 0;" +
+        "color:#7f1d1d;";
+
+      const titulo = document.createElement("h3");
+      titulo.textContent = "🚨 " + incidencia.conductor;
+
+      const motivo = document.createElement("p");
+
+      const nombres = {
+        falla_mecanica: "FALLA MECÁNICA / BUS EN PANA",
+        accidente: "ACCIDENTE",
+        otra: "OTRA INCIDENCIA"
+      };
+
+      motivo.textContent =
+        "Motivo: " + (nombres[incidencia.motivo] || incidencia.motivo);
+
+      const recorrido = document.createElement("p");
+      const r = incidencia.recorrido;
+
+      recorrido.textContent = r
+        ? "Recorrido: " + r.origen + " → " + r.destino +
+          " | Salida: " + r.hora + " | Fecha: " + r.fecha
+        : "Recorrido no disponible";
+
+      const fecha = document.createElement("p");
+
+      fecha.textContent =
+        "Reportado: " +
+        new Date(incidencia.creado_at).toLocaleString("es-CL", {
+          timeZone: "America/Santiago"
+        });
+
+      tarjeta.append(titulo, motivo, recorrido, fecha);
+
+      if (r && r.latitud != null && r.longitud != null) {
+        const enlace = document.createElement("a");
+
+        enlace.href =
+          "https://www.google.com/maps?q=" +
+          encodeURIComponent(r.latitud + "," + r.longitud);
+
+        enlace.target = "_blank";
+        enlace.rel = "noopener noreferrer";
+        enlace.textContent = "📍 VER ÚLTIMA UBICACIÓN GPS";
+
+        tarjeta.appendChild(enlace);
+      }
+
+      lista.appendChild(tarjeta);
+    }
+
+  } catch (error) {
+    lista.textContent =
+      "No se pudieron actualizar las incidencias: " + error.message;
+  } finally {
+    consultandoIncidenciasAdmin = false;
+  }
+}
+
+setInterval(cargarIncidenciasAdmin, 10000);
+
+document.getElementById("entrar")
+  .addEventListener("click", () => {
+    setTimeout(cargarIncidenciasAdmin, 600);
+  });
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) cargarIncidenciasAdmin();
 });
 </script>
 
