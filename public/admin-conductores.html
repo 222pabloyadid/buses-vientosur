@@ -19,6 +19,30 @@ small{color:#64748b}
 #panel{display:none}
 #mensaje{min-height:24px}
 </style>
+
+<link rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+#mapa-conductores {
+  height: 350px;
+  border-radius: 12px;
+  margin: 15px 0;
+  z-index: 1;
+}
+.conductor-gps {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 13px;
+  text-align: left;
+  background: #e8f1fc;
+  color: #123c70;
+}
+.conductor-gps.seleccionado {
+  background: #123c70;
+  color: white;
+}
+</style>
 </head>
 <body>
 <header>
@@ -33,7 +57,16 @@ small{color:#64748b}
 <button id="entrar">INGRESAR</button>
 </section>
 
+
 <div id="panel">
+<section>
+<h2>Ubicación de conductores</h2>
+<p>Toca un conductor para ver dónde viene su bus.</p>
+<div id="mapa-conductores"></div>
+<div id="lista-gps"></div>
+<p id="estado-gps"></p>
+</section>
+
 <section>
 <h2>Registrar conductor</h2>
 <form id="formConductor">
@@ -164,5 +197,181 @@ document.getElementById("salir").onclick = () => {
   aviso("");
 };
 </script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let mapaConductores = null;
+let marcadoresConductores = new Map();
+let conductorSeleccionado = null;
+let intervaloConductores = null;
+
+function prepararMapaConductores() {
+  if (mapaConductores) {
+    mapaConductores.invalidateSize();
+    return;
+  }
+
+  mapaConductores = L.map("mapa-conductores")
+    .setView([-38.74, -72.59], 9);
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      attribution: "&copy; OpenStreetMap",
+      maxZoom: 19
+    }
+  ).addTo(mapaConductores);
+}
+
+function fechaGPS(valor) {
+  if (!valor) return "Sin señal GPS";
+
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return "Fecha desconocida";
+
+  return fecha.toLocaleString("es-CL", {
+    timeZone: "America/Santiago"
+  });
+}
+
+async function actualizarMapaConductores() {
+  if (!clave || document.getElementById("panel").style.display === "none") {
+    return;
+  }
+
+  try {
+    const datos = await solicitar("ubicaciones");
+    const recorridos = datos.ubicaciones || [];
+    const lista = document.getElementById("lista-gps");
+    const estado = document.getElementById("estado-gps");
+
+    lista.replaceChildren();
+
+    const presentes = new Set();
+
+    for (const recorrido of recorridos) {
+      const id = recorrido.recorrido_id;
+      presentes.add(id);
+
+      const lat = Number(recorrido.latitud);
+      const lng = Number(recorrido.longitud);
+
+      const tieneGPS =
+        recorrido.latitud !== null &&
+        recorrido.longitud !== null &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 && lat <= 90 &&
+        lng >= -180 && lng <= 180;
+
+      const textoEstado = !tieneGPS
+        ? "Sin ubicación GPS"
+        : recorrido.gps_reciente
+          ? "GPS reciente"
+          : "Última ubicación registrada (sin señal reciente)";
+
+      if (tieneGPS) {
+        let marcador = marcadoresConductores.get(id);
+
+        if (!marcador) {
+          marcador = L.marker([lat, lng]).addTo(mapaConductores);
+          marcadoresConductores.set(id, marcador);
+        } else {
+          marcador.setLatLng([lat, lng]);
+        }
+
+        const contenido = document.createElement("div");
+
+        const titulo = document.createElement("strong");
+        titulo.textContent = recorrido.nombre;
+
+        const detalle = document.createElement("p");
+        detalle.textContent =
+          recorrido.origen + " - " + recorrido.destino +
+          " | Salida: " + recorrido.hora;
+
+        const ultima = document.createElement("p");
+        ultima.textContent =
+          textoEstado + " | " +
+          fechaGPS(recorrido.gps_actualizado_at);
+
+        contenido.append(titulo, detalle, ultima);
+        marcador.bindPopup(contenido);
+
+        marcador.off("click");
+        marcador.on("click", () => {
+          conductorSeleccionado = id;
+        });
+      }
+
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.className = "conductor-gps" +
+        (conductorSeleccionado === id ? " seleccionado" : "");
+
+      boton.textContent =
+        recorrido.nombre + " | " +
+        recorrido.origen + " - " + recorrido.destino +
+        " | " + recorrido.hora + " | " + textoEstado;
+
+      boton.onclick = () => {
+        conductorSeleccionado = id;
+
+        if (tieneGPS) {
+          mapaConductores.setView([lat, lng], 15);
+          marcadoresConductores.get(id).openPopup();
+        } else {
+          estado.textContent =
+            recorrido.nombre + " todavía no ha enviado su ubicación.";
+        }
+
+        actualizarMapaConductores();
+      };
+
+      lista.appendChild(boton);
+    }
+
+    for (const [id, marcador] of marcadoresConductores) {
+      if (!presentes.has(id)) {
+        mapaConductores.removeLayer(marcador);
+        marcadoresConductores.delete(id);
+      }
+    }
+
+    estado.textContent = recorridos.length
+      ? recorridos.length + " recorrido(s) activo(s)."
+      : "No hay conductores realizando recorridos.";
+
+  } catch (error) {
+    document.getElementById("estado-gps").textContent =
+      "No se pudo actualizar el seguimiento: " + error.message;
+  }
+}
+
+document.getElementById("entrar").addEventListener("click", () => {
+  setTimeout(() => {
+    if (document.getElementById("panel").style.display !== "block") return;
+
+    prepararMapaConductores();
+    actualizarMapaConductores();
+
+    if (!intervaloConductores) {
+      intervaloConductores = setInterval(
+        actualizarMapaConductores,
+        15000
+      );
+    }
+  }, 500);
+});
+
+document.getElementById("salir").addEventListener("click", () => {
+  if (intervaloConductores) {
+    clearInterval(intervaloConductores);
+    intervaloConductores = null;
+  }
+  conductorSeleccionado = null;
+});
+</script>
+
 </body>
 </html>

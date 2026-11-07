@@ -84,5 +84,67 @@ module.exports = function crearAdminConductores(supabase) {
     }
   });
 
+
+  // Seguimiento GPS de conductores con recorridos activos
+  router.get("/ubicaciones", async (req, res) => {
+    try {
+      const { data: recorridos, error } = await supabase
+        .from("recorridos_conductor")
+        .select(
+          "id,conductor_id,fecha,hora,origen,destino,latitud,longitud,gps_actualizado_at,iniciado_at"
+        )
+        .eq("estado", "activo");
+
+      if (error) throw error;
+
+      const { data: conductores, error: errorConductores } =
+        await supabase
+          .from("conductores")
+          .select("id,nombre,usuario,activo");
+
+      if (errorConductores) throw errorConductores;
+
+      const nombres = new Map(
+        (conductores || []).map(c => [c.id, c])
+      );
+
+      const ubicaciones = (recorridos || []).map(r => {
+        const conductor = nombres.get(r.conductor_id);
+
+        const antiguedad = r.gps_actualizado_at
+          ? Date.now() - new Date(r.gps_actualizado_at).getTime()
+          : null;
+
+        return {
+          recorrido_id: r.id,
+          nombre: conductor?.nombre || "Conductor",
+          usuario: conductor?.usuario || "",
+          activo: conductor?.activo === true,
+          origen: r.origen,
+          destino: r.destino,
+          fecha: r.fecha,
+          hora: r.hora,
+          latitud: r.latitud,
+          longitud: r.longitud,
+          gps_actualizado_at: r.gps_actualizado_at,
+          iniciado_at: r.iniciado_at,
+          gps_reciente: antiguedad !== null &&
+            antiguedad >= 0 &&
+            antiguedad < 60000
+        };
+      });
+
+      res.set("Cache-Control", "no-store");
+      res.json({ ok: true, ubicaciones });
+
+    } catch (error) {
+      console.error("ERROR SEGUIMIENTO CONDUCTORES:", error);
+      res.status(500).json({
+        ok: false,
+        mensaje: "No se pudieron consultar las ubicaciones"
+      });
+    }
+  });
+
   return router;
 };
