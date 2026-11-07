@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buses VientoSur | Pasajes</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="cabecera">
+<img src="/logo.png" class="logo" alt="Buses VientoSur">
+<p>Tu viaje comienza aquí</p>
+</header>
+
+<main class="contenedor">
+<section class="tarjeta">
+
+<div class="encabezado">
+<span>VIAJA CON NOSOTROS</span>
+<h1>Compra tu pasaje</h1>
+<p>Consulta horarios, tarifas y elige tu asiento</p>
+</div>
+
+<div class="formulario">
+
+<label for="nombre">Nombre del pasajero</label>
+<input id="nombre" type="text" placeholder="Ingresa tu nombre" autocomplete="name">
+
+<label for="correo">Correo electrónico</label>
+<input id="correo" type="email" placeholder="tu@email.com" autocomplete="email">
+
+<div class="rutas">
+<div>
+<label for="origen">Origen</label>
+<select id="origen" onchange="actualizarDestinos()">
+<option>Tolten</option>
+<option>Hualpin</option>
+<option>TeodoroSchmidt</option>
+<option>BarrosArana</option>
+<option>Temuco</option>
+</select>
+</div>
+
+<div>
+<label for="destino">Destino</label>
+<select id="destino">
+<option>Temuco</option>
+<option>Freire</option>
+<option>Pitrufquen</option>
+</select>
+</div>
+</div>
+
+<label for="fecha">Fecha de viaje</label>
+<input id="fecha" name="fecha" type="date">
+
+<button class="buscar" onclick="buscar()">
+Buscar horarios
+</button>
+
+<div id="resultado" class="resultado" aria-live="polite"></div>
+
+<button class="continuar" onclick="irAAsientos()">
+Continuar a los asientos →
+</button>
+
+</div>
+</section>
+
+<p class="frase">Viaja cómodo · Viaja seguro · Viaja VientoSur</p>
+</main>
+
+<footer>
+© 2026 Buses VientoSur · Creado por Pablo Yañez
+</footer>
+
+<script>
+function actualizarDestinos() {
+  const origen = document.getElementById("origen").value;
+  const destinoSelect = document.getElementById("destino");
+
+  destinoSelect.innerHTML = "";
+
+  if (origen === "Temuco") {
+    destinoSelect.innerHTML += "<option>Lolen</option>";
+    destinoSelect.innerHTML += "<option>Arauco</option>";
+    destinoSelect.innerHTML += "<option>Parada21</option>";
+    destinoSelect.innerHTML += "<option>LasDichas</option>";
+    destinoSelect.innerHTML += "<option>Limite</option>";
+    destinoSelect.innerHTML += "<option>BarrosArana</option>";
+    destinoSelect.innerHTML += "<option>Parada31</option>";
+    destinoSelect.innerHTML += "<option>TeodoroSchmidt</option>";
+    destinoSelect.innerHTML += "<option>Hualpin</option>";
+    destinoSelect.innerHTML += "<option>Tolten</option>";
+  } else {
+    destinoSelect.innerHTML += "<option>Temuco</option>";
+    destinoSelect.innerHTML += "<option>Freire</option>";
+    destinoSelect.innerHTML += "<option>Pitrufquen</option>";
+  }
+}
+async function buscar() {
+  const origen = document.getElementById("origen").value;
+  const destino = document.getElementById("destino").value;
+  const fecha = document.getElementById("fecha").value;
+  
+  const hoy = new Date().toLocaleDateString("sv-SE");
+
+  if (fecha < hoy) {
+      alert("No puedes comprar pasajes para fechas pasadas");
+      return;
+  }
+
+  if (!fecha) {
+    alert("Selecciona una fecha");
+    return;
+  }
+
+  let dia = "semana";
+
+  const [year, month, day] = fecha.split("-");
+  const fechaObj = new Date(year, month - 1, day);
+  const diaSemana = fechaObj.getDay(); // 0=domingo, 6=sábado
+
+  if (diaSemana === 6) dia = "sabado";
+  if (diaSemana === 0) dia = "domingo";
+
+  const res = await fetch('/horarios?dia=' + dia + '&origen=' + origen + '&destino=' + destino + '&fecha=' + fecha);
+  const data = await res.json();
+  // Obtener precio
+  const resPrecio = await fetch('/tarifa?origen=' + origen + '&destino=' + destino);
+  const dataPrecio = await resPrecio.json();
+  window.precioSeleccionado = dataPrecio.precio;
+
+  const contenedor = document.getElementById("resultado");
+
+let html = "";
+html += "<h3>Selecciona un horario:</h3>";
+html += "<select id='horarioSelect'>";
+html += "<option value=''>-- Seleccionar --</option>";
+
+data.horarios.forEach(hora => {
+  html += "<option value='" + hora + "'>" + hora + "</option>";
+});
+
+html += "</select>";
+html += "<p>Precio: $" + dataPrecio.precio + "</p>";
+
+contenedor.innerHTML = html;
+
+document.getElementById("horarioSelect").addEventListener("change", (e) => {
+  window.horarioSeleccionado = e.target.value;
+});
+
+  
+}
+
+
+actualizarDestinos();
+function irAAsientos() {
+    const fecha = document.getElementById("fecha").value;
+    const nombre = document.getElementById("nombre").value;
+    const correo = document.getElementById("correo").value;
+
+    if (!nombre) {
+        alert("Ingresa tu nombre");
+        return;
+    }
+
+    if (!correo) {
+        alert("Ingresa tu correo");
+        return;
+    }    
+
+
+    if (!fecha) {
+        alert("Selecciona una fecha");
+        return;
+    }
+
+    if (!window.horarioSeleccionado) {
+        alert("Selecciona un horario");
+        return;
+    }      
+
+    const origen = document.getElementById("origen").value;
+    const destino = document.getElementById("destino").value;
+
+    window.location.href = "/asientos.html?origen=" + origen +
+    "&destino=" + destino +
+    "&fecha=" + fecha +
+    "&hora=" + window.horarioSeleccionado +
+    "&nombre=" + nombre +
+    "&correo=" + correo +
+    "&precio=" + window.precioSeleccionado;
+}
+
+</script>
+</body>
+</html>
