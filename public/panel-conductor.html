@@ -42,6 +42,13 @@ small{color:#64748b}
 </section>
 
 <section>
+<h3>🎟️ MIS PASAJES VENDIDOS</h3>
+<p id="resumenPasajes">Esperando recorrido...</p>
+<div id="listaPasajesVendidos"></div>
+<small>Actualización automática cada 15 segundos.</small>
+</section>
+
+<section>
 <h3>Validación de boletos</h3>
 <button id="escanear" disabled>ESCANEAR QR</button>
 <small>Disponible al iniciar el recorrido.</small>
@@ -590,6 +597,106 @@ document.getElementById("gps").addEventListener("click", () => {
   } else {
     iniciarGPSConductor();
   }
+});
+</script>
+
+
+<script>
+let actualizandoPasajes = false;
+
+async function cargarPasajesVendidos() {
+  if (actualizandoPasajes) return;
+
+  actualizandoPasajes = true;
+
+  const resumen = document.getElementById("resumenPasajes");
+  const lista = document.getElementById("listaPasajesVendidos");
+
+  try {
+    const tokenPasajes = sessionStorage.getItem(
+      "vientosur_conductor_token"
+    );
+
+    if (!tokenPasajes) return;
+
+    const respuesta = await fetch(
+      "/api/conductor/pasajes-vendidos",
+      {
+        headers: {
+          Authorization: "Bearer " + tokenPasajes
+        },
+        cache: "no-store"
+      }
+    );
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok || !datos.ok) {
+      throw new Error(datos.mensaje || "Error consultando pasajes");
+    }
+
+    lista.replaceChildren();
+
+    if (!datos.recorrido) {
+      resumen.textContent = "Inicia un recorrido para ver sus pasajes.";
+      return;
+    }
+
+    const cantidad = Number(datos.cantidad || 0);
+    const abordados = Number(datos.abordados || 0);
+    const pendientes = cantidad - abordados;
+
+    resumen.textContent =
+      "Vendidos: " + cantidad +
+      " | Pendientes: " + pendientes +
+      " | Abordados: " + abordados;
+
+    if (!cantidad) {
+      lista.textContent = "Todavía no hay pasajes vendidos para esta salida.";
+      return;
+    }
+
+    (datos.pasajes || []).forEach((pasaje, indice) => {
+      const tarjeta = document.createElement("div");
+
+      tarjeta.style.cssText =
+        "padding:12px;margin:10px 0;border:1px solid #dbe3ee;" +
+        "border-radius:12px;background:#f8fafc;color:#172554;";
+
+      const titulo = document.createElement("strong");
+      titulo.textContent =
+        (indice + 1) + ". ASIENTO " + pasaje.asiento;
+
+      const trayecto = document.createElement("p");
+      trayecto.textContent =
+        "📍 SUBE: " + pasaje.sube +
+        " → BAJA: " + pasaje.baja;
+
+      const estado = document.createElement("p");
+      estado.textContent = pasaje.abordado
+        ? "✅ YA ABORDÓ"
+        : "🟠 PENDIENTE DE SUBIR";
+
+      estado.style.fontWeight = "bold";
+
+      tarjeta.append(titulo, trayecto, estado);
+      lista.appendChild(tarjeta);
+    });
+
+  } catch (error) {
+    resumen.textContent = "No se pudieron actualizar los pasajes.";
+    console.error("ERROR PASAJES:", error);
+  } finally {
+    actualizandoPasajes = false;
+  }
+}
+
+cargarPasajesVendidos();
+
+setInterval(cargarPasajesVendidos, 15000);
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) cargarPasajesVendidos();
 });
 </script>
 

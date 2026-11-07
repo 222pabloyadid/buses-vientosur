@@ -413,6 +413,110 @@ function crearRutasConductores(supabase) {
   });
 
 
+
+  // Pasajes pagados del recorrido activo del conductor
+  router.get("/pasajes-vendidos", async (req, res) => {
+    try {
+      const token = (req.headers.authorization || "")
+        .replace(/^Bearer /, "").trim();
+
+      const sesion = sesiones.get(token);
+
+      if (!sesion || sesion.expira < Date.now()) {
+        return res.status(401).json({
+          ok: false,
+          mensaje: "Sesión vencida"
+        });
+      }
+
+      const { data: recorrido, error: errorRecorrido } =
+        await supabase
+          .from("recorridos_conductor")
+          .select("id,fecha,hora,origen,destino")
+          .eq("conductor_id", sesion.conductor_id)
+          .eq("estado", "activo")
+          .maybeSingle();
+
+      if (errorRecorrido) throw errorRecorrido;
+
+      if (!recorrido) {
+        return res.json({
+          ok: true,
+          pasajes: [],
+          cantidad: 0,
+          abordados: 0,
+          total: 0
+        });
+      }
+
+      const { data: ventas, error: errorVentas } =
+        await supabase
+          .from("ventas")
+          .select("id,asiento,ruta,precio,estado,validado_at")
+          .eq("fecha", recorrido.fecha)
+          .eq("hora", recorrido.hora)
+          .eq("estado", "pagado");
+
+      if (errorVentas) throw errorVentas;
+
+      const paradasTemucoTolten = [
+        "Lolen", "Arauco", "Parada21", "LasDichas",
+        "Limite", "BarrosArana", "Parada31",
+        "TeodoroSchmidt", "Hualpin", "Tolten"
+      ];
+
+      const pasajes = (ventas || []).filter(venta => {
+        const partes = String(venta.ruta || "").split(" - ");
+        if (partes.length !== 2) return false;
+
+        const [origen, destino] = partes;
+
+        if (recorrido.origen === "Temuco" &&
+            recorrido.destino === "Tolten") {
+          return origen === "Temuco" &&
+            paradasTemucoTolten.includes(destino);
+        }
+
+        return origen === recorrido.origen &&
+          destino === recorrido.destino;
+      }).map(venta => {
+        const [sube, baja] = venta.ruta.split(" - ");
+
+        return {
+          id: venta.id,
+          asiento: venta.asiento,
+          sube,
+          baja,
+          precio: Number(venta.precio || 0),
+          abordado: Boolean(venta.validado_at)
+        };
+      });
+
+      pasajes.sort((a, b) =>
+        Number(a.asiento) - Number(b.asiento)
+      );
+
+      res.set("Cache-Control", "no-store");
+
+      return res.json({
+        ok: true,
+        recorrido,
+        pasajes,
+        cantidad: pasajes.length,
+        abordados: pasajes.filter(p => p.abordado).length,
+        total: pasajes.reduce((s, p) => s + p.precio, 0)
+      });
+
+    } catch (error) {
+      console.error("ERROR PASAJES VENDIDOS:", error);
+
+      return res.status(500).json({
+        ok: false,
+        mensaje: "No se pudieron consultar los pasajes"
+      });
+    }
+  });
+
   // Producción diaria del conductor
   router.get("/produccion", async (req, res) => {
     try {
