@@ -72,125 +72,153 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 
 function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
   return new Promise((resolve, reject) => {
+    const path = require("path");
+    const file = path.join(
+      require("os").tmpdir(),
+      "boleto_" + Date.now() + "_" +
+      require("crypto").randomBytes(4).toString("hex") + ".pdf"
+    );
 
-    const file = "boleto_" + Date.now() + ".pdf";
-    const doc = new PDFDocument({ size: "A6", margin: 20 });
+    const doc = new PDFDocument({
+      size: [340, 490],
+      margin: 0,
+      autoFirstPage: true
+    });
 
     const stream = fs.createWriteStream(file);
     doc.pipe(stream);
 
-    // 🎨 FONDO
-    doc.rect(0, 0, 300, 420).fill("#f4f4f4");
-
-    // 🎫 TARJETA
-    doc.roundedRect(10, 10, 280, 400, 10).fill("#ffffff");
-
-    // 🚌 LOGO (opcional)
-    try {
-      doc.image("public/logo.png", 90, 20, { width: 120 });
-    } catch (e) {}
-
-    doc.moveDown(3);
-
-    // 🔷 ENCABEZADO
-    doc.fillColor("#000");
-    doc.fontSize(16).text("Buses VientoSur", { align: "center" });
-    doc.fontSize(10).fillColor("#555")
-       .text("Pasaje Electrónico", { align: "center" });
-
-    doc.moveDown(1);
-
-    // 🔹 LÍNEA
-    doc.moveTo(30, 80).lineTo(270, 80).dash(3, { space: 3 }).stroke();
-
-    doc.moveDown(1);
-
-    // 📄 DATOS
-    doc.fillColor("#000").fontSize(11);
-
-    doc.text("Nombre: " + nombre);
-    doc.text("Asiento: " + asiento);
-
-    doc.moveDown(0.5);
-
-    doc.fontSize(12);
-    doc.text("Origen: " + origen);
-    doc.text("Destino: " + destino);
-
-    doc.moveDown(0.5);
-
-    doc.fontSize(11);
-    doc.text("Fecha: " + fecha);
-    doc.text("Hora: " + hora);
-    doc.text("Duración: 2:30 hrs");
-
-    doc.moveDown(1);
-
-    // 🔥 ASIENTO GRANDE
-    doc.fontSize(18)
-       .fillColor("#000")
-       .text("ASIENTO " + asiento, { align: "center" });
-
-    doc.moveDown(1);
-
-    // 🔹 LÍNEA
-    doc.moveTo(30, 250).lineTo(270, 250).dash(3, { space: 3 }).stroke();
-
-    doc.moveDown(1);
-
-    // 💬 MENSAJES
-
-    doc.moveDown(1);
-
-    doc.fillColor("red")
-       .fontSize(10)
-       .text("⚠️ IMPORTANTE", { align: "center" });
-
-    doc.moveDown(0.5);
-
-    doc.fillColor("#000")
-       .fontSize(9)
-       .text("Es obligación del pasajero presentarse 20 minutos antes de la salida del bus.", { align: "center" });
-
-    doc.text("En caso de que el bus se adelante, la salida puede realizarse con hasta 20 minutos de anticipación.", { align: "center" });
-
-    doc.text("No se realizan devoluciones ni reembolsos de pasajes.", { align: "center" });
-
-    doc.fontSize(9).fillColor("#555");
-
-    doc.text("Preséntate 20 minutos antes", { align: "center" });
-    doc.text("Gracias por preferir BusesVientoSur", { align: "center" });
-    doc.text("Que tengas un excelente día", { align: "center" });
-
-    doc.moveDown(0.5);
-    doc.text("Saludos equipo VientoSur", { align: "center" });
-
-    doc.moveDown(1);
-
-    // ⚠️ NOTA FINAL
-    doc.fontSize(8).fillColor("#777");
-
-    doc.text(
-      "Asiento clásico. Recuerda guardar tus pertenencias dentro del bus, son de exclusiva responsabilidad del pasajero.",
-      { align: "center" }
-    );
-
-    doc.end();
-
     stream.on("finish", () => resolve(file));
     stream.on("error", reject);
+    doc.on("error", reject);
+
+    // Fondo y encabezado
+    doc.rect(0, 0, 340, 490).fill("#f1f5f9");
+    doc.roundedRect(12, 12, 316, 466, 12).fill("#ffffff");
+    doc.roundedRect(12, 12, 316, 94, 12).fill("#103b70");
+    doc.rect(12, 88, 316, 18).fill("#103b70");
+
+    const logo = path.join(__dirname, "public", "logo.png");
+
+    if (fs.existsSync(logo)) {
+      try {
+        doc.image(logo, 26, 25, {
+          fit: [65, 65],
+          align: "center",
+          valign: "center"
+        });
+      } catch (e) {
+        console.log("No se pudo insertar el logo:", e.message);
+      }
+    }
+
+    doc.fillColor("#ffffff")
+       .font("Helvetica-Bold")
+       .fontSize(18)
+       .text("VIENTOSUR", 100, 36, {
+         width: 210,
+         align: "center",
+         lineBreak: false
+       });
+
+    doc.font("Helvetica")
+       .fontSize(9)
+       .text("PASAJE ELECTRONICO", 100, 64, {
+         width: 210,
+         align: "center"
+       });
+
+    // Ruta del pasajero
+    doc.fillColor("#64748b")
+       .fontSize(9)
+       .text("ORIGEN", 28, 124);
+
+    doc.text("DESTINO", 183, 124);
+
+    doc.fillColor("#103b70")
+       .font("Helvetica-Bold")
+       .fontSize(15)
+       .text(String(origen || "-"), 28, 140, {
+         width: 128,
+         height: 38
+       });
+
+    doc.text(String(destino || "-"), 183, 140, {
+      width: 128,
+      height: 38
+    });
+
+    doc.moveTo(28, 187)
+       .lineTo(312, 187)
+       .strokeColor("#dbe3ed")
+       .stroke();
+
+    // Información del viaje
+    function campo(etiqueta, valor, x, y, ancho = 130) {
+      doc.font("Helvetica")
+         .fontSize(9)
+         .fillColor("#64748b")
+         .text(etiqueta, x, y, { width: ancho });
+
+      doc.font("Helvetica-Bold")
+         .fontSize(12)
+         .fillColor("#172b4d")
+         .text(String(valor || "-"), x, y + 16, {
+           width: ancho,
+           height: 30
+         });
+    }
+
+    campo("FECHA", fecha, 28, 202);
+    campo("HORA DE SALIDA", hora, 183, 202);
+    campo("PASAJERO", nombre, 28, 259, 175);
+    campo("ASIENTO", asiento, 232, 259, 80);
+
+    doc.moveTo(28, 319)
+       .lineTo(312, 319)
+       .strokeColor("#dbe3ed")
+       .stroke();
+
+    doc.font("Helvetica-Bold")
+       .fontSize(10)
+       .fillColor("#103b70")
+       .text("INFORMACION IMPORTANTE", 28, 333, {
+         width: 284,
+         align: "center"
+       });
+
+    doc.font("Helvetica")
+       .fontSize(9)
+       .fillColor("#334155")
+       .text(
+         "Presentarse 20 minutos antes de la salida.",
+         28, 354, { width: 284, align: "center" }
+       );
+
+    doc.text(
+      "Conserva este boleto para presentarlo al conductor.",
+      28, 371, { width: 284, align: "center" }
+    );
+
+    doc.text(
+      "Condiciones de cambios y devoluciones segun normativa vigente.",
+      28, 388, { width: 284, align: "center" }
+    );
+
+    doc.roundedRect(28, 424, 284, 32, 6).fill("#e8f4f8");
+
+    doc.fillColor("#103b70")
+       .font("Helvetica-Bold")
+       .fontSize(10)
+       .text("Gracias por viajar con VientoSur", 35, 434, {
+         width: 270,
+         align: "center"
+       });
+
+    doc.end();
   });
 }
-  
 
-const { MercadoPagoConfig, Preference } = require("mercadopago");
-
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN
-});
-
-
-const app = express();
 app.use(cors({
   origin: ["https://busesvientosur.cl", "https://www.busesvientosur.cl"],
   methods: ["GET", "POST"],
@@ -591,6 +619,8 @@ app.post("/webhook", async (req, res) => {
 // 🔒 BLOQUEAR TODO EL BUS
 datos.hora = datos.hora.slice(0,5);
 // 1. buscar bus de la hora comprada
+const origenPasajero = datos.origen;
+const destinoPasajero = datos.destino;
 // Convertir paradas intermedias al recorrido principal
 if (
   datos.origen === "Temuco" &&
@@ -647,8 +677,8 @@ await supabase.from("bloqueos").insert(bloqueos);
       enviarCorreoSMTP(
         datos.correo,
         datos.nombre,
-        datos.origen,
-        datos.destino,
+        origenPasajero,
+        destinoPasajero,
         datos.fecha,
         datos.hora,
         datos.asiento
