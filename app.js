@@ -186,13 +186,13 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
 const { MercadoPagoConfig, Preference } = require("mercadopago");
 
 const client = new MercadoPagoConfig({
-  accessToken: "APP_USR-5882389343621419-033114-27702d8456f4112a891c237be1845d00-2591372650"
+  accessToken: process.env.MP_ACCESS_TOKEN
 });
 
 
 const app = express();
 app.use(cors({
-  origin: ["https://busevientosur.cl", "https://www.busevientosur.cl"],
+  origin: ["https://busesvientosur.cl", "https://www.busesvientosur.cl"],
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"]
 }));
@@ -685,6 +685,190 @@ await supabase.from("bloqueos").insert(bloqueos);
 
 // 🚀 INICIAR SERVIDOR
 const PORT = process.env.PORT || 3000;
+
+
+// AUTENTICACION PASAJEROS VIENTOSUR
+function clienteAuthVientoSur() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    }
+  );
+}
+
+const intentosAuth = new Map();
+
+function limitarAuth(req, res, next) {
+  const ahora = Date.now();
+  const ip = req.ip;
+  const anterior = intentosAuth.get(ip) || {
+    inicio: ahora,
+    cantidad: 0
+  };
+
+  if (ahora - anterior.inicio > 15 * 60 * 1000) {
+    anterior.inicio = ahora;
+    anterior.cantidad = 0;
+  }
+
+  anterior.cantidad++;
+  intentosAuth.set(ip, anterior);
+
+  if (anterior.cantidad > 30) {
+    return res.status(429).json({
+      ok: false,
+      mensaje: "Demasiados intentos. Prueba más tarde."
+    });
+  }
+
+  next();
+}
+
+app.post("/api/auth/registro", limitarAuth, async (req, res) => {
+  try {
+    const { nombre, telefono, correo, password } = req.body || {};
+
+    if (
+      typeof nombre !== "string" ||
+      nombre.trim().length < 3 ||
+      nombre.length > 100 ||
+      typeof telefono !== "string" ||
+      !/^\+?[0-9 ]{8,16}$/.test(telefono.trim()) ||
+      typeof correo !== "string" ||
+      correo.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim()) ||
+      typeof password !== "string" ||
+      password.length < 10 ||
+      password.length > 128
+    ) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Revisa los datos. La contraseña debe tener al menos 10 caracteres."
+      });
+    }
+
+    const auth = clienteAuthVientoSur();
+
+    const { error } = await auth.auth.signUp({
+      email: correo.trim().toLowerCase(),
+      password,
+      options: {
+        emailRedirectTo: "https://busesvientosur.cl/login.html",
+        data: {
+          nombre: nombre.trim(),
+          telefono: telefono.trim()
+        }
+      }
+    });
+
+    if (error) {
+      console.error("Error registro VientoSur:", error.code);
+      return res.status(error.status === 429 ? 429 : 400).json({
+        ok: false,
+        mensaje: error.status === 429
+          ? "Límite de registros alcanzado. Intenta más tarde."
+          : "No se pudo completar el registro. Revisa los datos."
+      });
+    }
+
+    res.json({
+      ok: true,
+      mensaje: "Revisa tu correo y confirma tu cuenta antes de ingresar."
+    });
+  } catch (error) {
+    console.error("Error interno registro:", error.message);
+    res.status(500).json({
+      ok: false,
+      mensaje: "No se pudo procesar el registro."
+    });
+  }
+});
+
+app.post("/api/auth/login", limitarAuth, async (req, res) => {
+  try {
+    const { correo, password } = req.body || {};
+
+    if (
+      typeof correo !== "string" ||
+      correo.length > 254 ||
+      typeof password !== "string" ||
+      password.length > 128
+    ) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Datos de acceso inválidos."
+      });
+    }
+
+    const auth = clienteAuthVientoSur();
+
+    const { data, error } = await auth.auth.signInWithPassword({
+      email: correo.trim().toLowerCase(),
+      password
+    });
+
+    if (error || !data.session) {
+      return res.status(401).json({
+        ok: false,
+        mensaje: "Revisa tu correo, contraseña y confirmación de cuenta."
+      });
+    }
+
+    res.json({
+      ok: true,
+      token: data.session.access_token,
+      usuario: {
+        id: data.user.id,
+        nombre: data.user.user_metadata?.nombre || "",
+        correo: data.user.email
+      }
+    });
+  } catch (error) {
+    console.error("Error interno login:", error.message);
+    res.status(500).json({
+      ok: false,
+      mensaje: "No se pudo iniciar sesión."
+    });
+  }
+});
+
+app.get("/api/auth/yo", async (req, res) => {
+  try {
+    const encabezado = req.headers.authorization || "";
+    const token = encabezado.startsWith("Bearer ")
+      ? encabezado.slice(7)
+      : "";
+
+    if (!token) {
+      return res.status(401).json({ ok: false });
+    }
+
+    const auth = clienteAuthVientoSur();
+    const { data, error } = await auth.auth.getUser(token);
+
+    if (error || !data.user) {
+      return res.status(401).json({ ok: false });
+    }
+
+    res.set("Cache-Control", "no-store");
+    res.json({
+      ok: true,
+      usuario: {
+        id: data.user.id,
+        nombre: data.user.user_metadata?.nombre || "",
+        correo: data.user.email
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false });
+  }
+});
 
 app.listen(PORT, () => {
   console.log("Servidor corriendo en puerto", PORT);

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi cuenta | VientoSur</title>
+
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(150deg,#d9eef6,#eef7fa);
+  color: #102d58;
+}
+.contenedor {
+  width: min(100% - 32px, 440px);
+  margin: 24px auto;
+}
+.logo {
+  display: block;
+  width: 190px;
+  max-width: 75%;
+  margin: 0 auto 15px;
+}
+.tarjeta {
+  background: white;
+  border: 1px solid #d0e4eb;
+  border-radius: 22px;
+  padding: 25px;
+  box-shadow: 0 12px 30px #102d5815;
+}
+h1 { font-size: 25px; margin: 0 0 8px; }
+.subtitulo { color: #657c92; font-size: 14px; }
+label {
+  display: block;
+  margin: 17px 0 7px;
+  font-size: 13px;
+  font-weight: bold;
+}
+input {
+  width: 100%;
+  height: 50px;
+  padding: 12px;
+  border: 1px solid #cad9e5;
+  border-radius: 11px;
+  font-size: 16px;
+}
+input:focus {
+  outline: 2px solid #08a69b;
+  outline-offset: 1px;
+}
+button {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 23px;
+  border: 0;
+  border-radius: 11px;
+  background: #102d58;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}
+button:disabled { opacity: .6; }
+.enlace {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  color: #087f83;
+  font-weight: bold;
+  text-decoration: none;
+}
+.mensaje {
+  padding-top: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+</style>
+
+</head>
+<body>
+<main class="contenedor">
+<img src="/logo.png" class="logo" alt="Buses VientoSur">
+<section class="tarjeta">
+<h1>Mi cuenta</h1>
+<p id="estado">Verificando sesión...</p>
+<div id="perfil" hidden>
+<p id="nombre"></p>
+<p id="correo"></p>
+<button id="salir">Cerrar sesión</button>
+</div>
+<a class="enlace" href="/">Volver al inicio</a>
+</section>
+</main>
+<script>
+(async function() {
+  const token = sessionStorage.getItem("vientosur_token");
+  if (!token) {
+    location.replace("/login.html");
+    return;
+  }
+  try {
+    const res = await fetch("/api/auth/yo", {
+      headers: { Authorization: "Bearer " + token }
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error("Sesión vencida");
+    document.getElementById("estado").textContent = "Sesión activa";
+    document.getElementById("nombre").textContent = data.usuario.nombre;
+    document.getElementById("correo").textContent = data.usuario.correo;
+    document.getElementById("perfil").hidden = false;
+  } catch {
+    sessionStorage.removeItem("vientosur_token");
+    location.replace("/login.html");
+  }
+})();
+
+document.getElementById("salir").onclick = () => {
+  sessionStorage.removeItem("vientosur_token");
+  location.replace("/login.html");
+};
+</script>
+</body>
+</html>
