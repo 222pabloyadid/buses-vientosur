@@ -6,6 +6,11 @@ const fs = require('fs');
 const PDFDocument = require("pdfkit");
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
+const { MercadoPagoConfig, Preference } = require("mercadopago");
+
+const client = new MercadoPagoConfig({
+  accessToken: process.env.MP_ACCESS_TOKEN
+});
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -36,14 +41,14 @@ const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 
-async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento) {
+async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento, codigoQR = null, pagoId = null, intentoCorreo = 0) {
   console.log("📧 Enviando correo a:", correo);
 
   try {
     // generar PDF
-    const archivoPDF = await generarPDF(nombre, origen, destino, fecha, hora, asiento);
+    const archivoPDF = await generarPDF(nombre, origen, destino, fecha, hora, asiento, codigoQR);
 
-    await resend.emails.send({
+    const { data: correoEnviado, error: errorResend } = await resend.emails.send({
       from: "Buses VientoSur <ventas@busesvientosur.cl>",
       to: correo,
       subject: "Tu pasaje Buses VientoSur",
@@ -61,18 +66,28 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
           content: require("fs").readFileSync(archivoPDF)
         }
       ]
-    });
+    }, pagoId ? {
+      idempotencyKey: "boleto-" + String(pagoId) + "-intento-" + String(intentoCorreo)
+    } : undefined);
 
-    console.log(" CORREO ENVIADO");
+    if (errorResend) {
+      throw errorResend;
+    }
+
+    console.log("CORREO ACEPTADO POR RESEND:", correoEnviado?.id);
+    return true;
+
   } catch (error) {
-    console.log(" ERROR CORREO:", error);
+    console.error("ERROR ENVIANDO CORREO:", error);
+    return false;
   }
 }
  
 
-function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
-  return new Promise((resolve, reject) => {
+function generarPDF(nombre, origen, destino, fecha, hora, asiento, codigoQR = null) {
+  return new Promise(async (resolve, reject) => {
     const path = require("path");
+    const QRCode = require("qrcode");
     const file = path.join(
       require("os").tmpdir(),
       "boleto_" + Date.now() + "_" +
@@ -80,7 +95,7 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
     );
 
     const doc = new PDFDocument({
-      size: [340, 490],
+      size: [340, 625],
       margin: 0,
       autoFirstPage: true
     });
@@ -93,8 +108,8 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
     doc.on("error", reject);
 
     // Fondo y encabezado
-    doc.rect(0, 0, 340, 490).fill("#f1f5f9");
-    doc.roundedRect(12, 12, 316, 466, 12).fill("#ffffff");
+    doc.rect(0, 0, 340, 625).fill("#f1f5f9");
+    doc.roundedRect(12, 12, 316, 601, 12).fill("#ffffff");
     doc.roundedRect(12, 12, 316, 94, 12).fill("#103b70");
     doc.rect(12, 88, 316, 18).fill("#103b70");
 
@@ -205,12 +220,36 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
       28, 388, { width: 284, align: "center" }
     );
 
-    doc.roundedRect(28, 424, 284, 32, 6).fill("#e8f4f8");
+    // QR del boleto
+    if (codigoQR) {
+      const imagenQR = await QRCode.toBuffer(codigoQR, {
+        type: "png",
+        width: 300,
+        margin: 1,
+        errorCorrectionLevel: "M"
+      });
+
+      doc.image(imagenQR, 119, 414, {
+        width: 102,
+        height: 102
+      });
+
+      doc.font("Helvetica")
+         .fontSize(8)
+         .fillColor("#64748b")
+         .text(
+           "Presenta este QR al conductor",
+           28, 522,
+           { width: 284, align: "center" }
+         );
+    }
+
+    doc.roundedRect(28, 559, 284, 32, 6).fill("#e8f4f8");
 
     doc.fillColor("#103b70")
        .font("Helvetica-Bold")
        .fontSize(10)
-       .text("Gracias por viajar con VientoSur", 35, 434, {
+       .text("Gracias por viajar con VientoSur", 35, 569, {
          width: 270,
          align: "center"
        });
@@ -608,15 +647,71 @@ app.post("/webhook", async (req, res) => {
 
       const datos = JSON.parse(payment.external_reference || "{}");
 
-      const { error } = await supabase.from("ventas").insert([
+      // Evitar reprocesar pagos ya registrados.
+      const { data: ventaExistente, error: errorConsulta } = await supabase
+        .from("ventas")
+        .select("id")
+        .eq("pago_id", String(paymentId))
+        .maybeSingle();
+
+      if (errorConsulta) {
+        console.error("ERROR CONSULTANDO PAGO:", errorConsulta);
+        return res.sendStatus(500);
+      }
+
+      if (ventaExistente) {
+        console.log(
+          "PAGO YA REGISTRADO - SIN DUPLICAR BOLETO:",
+          paymentId
+        );
+
+        // Los correos pendientes los gestiona el proceso automático.
+        // No generar otro QR, venta ni correo desde este webhook.
+        return res.sendStatus(200);
+      }
+
+      const crypto = require("crypto");
+
+      const codigoQR = crypto.randomBytes(24).toString("hex");
+
+      const { data: venta, error } = await supabase.rpc(
+        "registrar_boleto_pagado",
         {
-          asiento: Number(datos.asiento),
-          fecha: datos.fecha,
-          hora: datos.hora,
-          ruta: datos.origen + " - " + datos.destino,
-          estado: "pagado"
+          p_pago_id: String(paymentId),
+          p_codigo_qr: codigoQR,
+          p_asiento: Number(datos.asiento),
+          p_fecha: datos.fecha,
+          p_hora: datos.hora,
+          p_ruta: datos.origen + " - " + datos.destino,
+          p_nombre: datos.nombre || null,
+          p_precio: Number(payment.transaction_amount)
         }
-      ]);
+      );
+
+      if (error) {
+        console.error("ERROR REGISTRANDO BOLETO:", error);
+        return res.sendStatus(500);
+      }
+
+      const codigoQRReal = venta.codigo_qr;
+
+      // Guardar el destinatario inmediatamente después de registrar la venta.
+      const { error: errorCorreoInicial } = await supabase
+        .from("ventas")
+        .update({
+          correo_destino: datos.correo,
+          correo_intentos: 1,
+          correo_proximo_intento_at:
+            new Date(Date.now() + 2 * 60000).toISOString()
+        })
+        .eq("pago_id", String(paymentId))
+        .is("correo_enviado_at", null);
+
+      if (errorCorreoInicial) {
+        console.error("ERROR GUARDANDO CORREO:", errorCorreoInicial);
+        return res.sendStatus(500);
+      }
+
 
 // 🔒 BLOQUEAR TODO EL BUS
 datos.hora = datos.hora.slice(0,5);
@@ -676,15 +771,65 @@ await supabase.from("bloqueos").insert(bloqueos);
 
       if (error) console.log("ERROR SUPABASE:", error);
 
-      enviarCorreoSMTP(
-        datos.correo,
-        datos.nombre,
-        origenPasajero,
-        destinoPasajero,
-        datos.fecha,
-        datos.hora,
-        datos.asiento
-      );
+      // Reservar el correo para evitar envíos duplicados.
+      const { data: correoReservado, error: errorReserva } =
+        await supabase.rpc("reservar_correo_boleto", {
+          p_pago_id: String(paymentId)
+        });
+
+      if (errorReserva) {
+        console.error("ERROR RESERVANDO CORREO:", errorReserva);
+        return res.sendStatus(500);
+      }
+
+      if (correoReservado === true) {
+        const correoAceptado = await enviarCorreoSMTP(
+          datos.correo,
+          datos.nombre,
+          origenPasajero,
+          destinoPasajero,
+          datos.fecha,
+          datos.hora,
+          datos.asiento,
+          codigoQRReal
+        , paymentId, 0);
+
+        if (correoAceptado === true) {
+          const { error: errorConfirmacion } = await supabase
+            .from("ventas")
+            .update({
+              correo_enviado_at: new Date().toISOString()
+            })
+            .eq("pago_id", String(paymentId));
+
+          if (errorConfirmacion) {
+            console.error("ERROR CONFIRMANDO CORREO:", errorConfirmacion);
+          } else {
+            console.log("CORREO REGISTRADO EN SUPABASE:", paymentId);
+          }
+        } else {
+          console.error("CORREO PENDIENTE DE REENVIO:", paymentId);
+
+          const proximoIntento = new Date(
+            Date.now() + 2 * 60 * 1000
+          ).toISOString();
+
+          const { error: errorReintento } = await supabase
+            .from("ventas")
+            .update({
+              correo_intentos: 1,
+              correo_proximo_intento_at: proximoIntento
+            })
+            .eq("pago_id", String(paymentId))
+            .is("correo_enviado_at", null);
+
+          if (errorReintento) {
+            console.error("ERROR PROGRAMANDO REINTENTO:", errorReintento);
+          }
+        }
+      } else {
+        console.log("CORREO YA RESERVADO:", paymentId);
+      }
 
       await fetch("https://script.google.com/macros/s/AKfycbwXAjjmKEZ4jqj3f58MmifBTgRqT9nKxyuQ9tT1C3vPN44ka-K1PRMAkTZR1s3Ft__7/exec", {
         method: "POST",
@@ -901,6 +1046,106 @@ app.get("/api/auth/yo", async (req, res) => {
     res.status(500).json({ ok: false });
   }
 });
+
+
+// REINTENTOS AUTOMATICOS DE BOLETOS
+let reintentosEnProceso = false;
+
+async function procesarReintentosBoletos() {
+  if (reintentosEnProceso) return;
+  reintentosEnProceso = true;
+
+  try {
+    const { data: pendientes, error } = await supabase
+      .rpc("obtener_correos_pendientes");
+
+    if (error) throw error;
+
+    for (const venta of pendientes || []) {
+      let reservado = false;
+
+      try {
+        const resultado = await supabase.rpc(
+          "reservar_correo_boleto",
+          { p_pago_id: venta.pago_id }
+        );
+
+        if (resultado.error || resultado.data !== true) continue;
+        reservado = true;
+
+        const { Payment } = require("mercadopago");
+        const paymentClient = new Payment(client);
+
+        const pago = await paymentClient.get({
+          id: venta.pago_id
+        });
+
+        if (pago.status !== "approved") {
+          throw new Error("Pago no confirmado");
+        }
+
+        const datos = JSON.parse(pago.external_reference || "{}");
+
+        const enviado = await enviarCorreoSMTP(
+          venta.correo_destino,
+          datos.nombre,
+          datos.origen,
+          datos.destino,
+          datos.fecha,
+          datos.hora,
+          datos.asiento,
+          venta.codigo_qr
+        , venta.pago_id, Number(venta.correo_intentos));
+
+        if (!enviado) throw new Error("Fallo envio Resend");
+
+        const { error: errorConfirmacion } = await supabase
+          .from("ventas")
+          .update({
+            correo_enviado_at: new Date().toISOString(),
+            correo_proximo_intento_at: null
+          })
+          .eq("id", venta.id)
+          .is("correo_enviado_at", null);
+
+        if (errorConfirmacion) throw errorConfirmacion;
+
+        console.log("BOLETO REENVIADO:", venta.pago_id);
+
+      } catch (errorVenta) {
+        console.error("ERROR REINTENTANDO BOLETO:", errorVenta);
+
+        if (!reservado) continue;
+
+        const intentos = Number(venta.correo_intentos) + 1;
+        const minutos = intentos === 2 ? 3 : intentos === 3 ? 10 : 0;
+
+        const proximo = minutos
+          ? new Date(Date.now() + minutos * 60000).toISOString()
+          : null;
+
+        const { error: errorActualizacion } = await supabase
+          .from("ventas")
+          .update({
+            correo_intentos: intentos,
+            correo_proximo_intento_at: proximo
+          })
+          .eq("id", venta.id)
+          .is("correo_enviado_at", null);
+
+        if (errorActualizacion) {
+          console.error("ERROR ACTUALIZANDO REINTENTO:", errorActualizacion);
+        }
+      }
+    }
+  } catch (errorGeneral) {
+    console.error("ERROR GENERAL DE REINTENTOS:", errorGeneral);
+  } finally {
+    reintentosEnProceso = false;
+  }
+}
+
+setInterval(procesarReintentosBoletos, 30000);
 
 app.listen(PORT, () => {
   console.log("Servidor corriendo en puerto", PORT);
