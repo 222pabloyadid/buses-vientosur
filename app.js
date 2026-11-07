@@ -219,6 +219,8 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento) {
   });
 }
 
+const app = express();
+
 app.use(cors({
   origin: ["https://busesvientosur.cl", "https://www.busesvientosur.cl"],
   methods: ["GET", "POST"],
