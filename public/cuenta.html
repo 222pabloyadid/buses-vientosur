@@ -95,7 +95,7 @@ button:disabled { opacity: .6; }
 </main>
 <script>
 (async function() {
-  const token = sessionStorage.getItem("vientosur_token");
+  const token = localStorage.getItem("vientosur_token");
   if (!token) {
     location.replace("/login.html");
     return;
@@ -111,13 +111,13 @@ button:disabled { opacity: .6; }
     document.getElementById("correo").textContent = data.usuario.correo;
     document.getElementById("perfil").hidden = false;
   } catch {
-    sessionStorage.removeItem("vientosur_token");
+    localStorage.removeItem("vientosur_token");
     location.replace("/login.html");
   }
 })();
 
 document.getElementById("salir").onclick = () => {
-  sessionStorage.removeItem("vientosur_token");
+  localStorage.removeItem("vientosur_token");
   location.replace("/login.html");
 };
 </script>

@@ -128,8 +128,8 @@ document.getElementById("formulario").addEventListener("submit", async e => {
     mensaje.style.color = "#087f83";
 
     if ("/api/auth/login" === "/api/auth/login" && resultado.token) {
-      sessionStorage.setItem("vientosur_token", resultado.token);
-      window.location.replace("/cuenta.html");
+      localStorage.setItem("vientosur_token", resultado.token);
+      window.location.replace("/");
     }
   } catch (error) {
     mensaje.textContent = "No se pudo conectar con el servidor.";

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#102d58">
+<title>Bienvenido | Buses VientoSur</title>
+<style>
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(150deg, #102d58, #245582);
+  color: white;
+}
+
+.pantalla {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.logo {
+  width: min(75vw, 290px);
+  background: white;
+  border-radius: 25px;
+  padding: 18px;
+  margin-bottom: 28px;
+}
+
+h1 {
+  font-size: 30px;
+  margin: 0 0 12px;
+}
+
+p {
+  color: #d5edf5;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.botones {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 30px;
+  display: grid;
+  gap: 15px;
+}
+
+.boton {
+  display: block;
+  padding: 18px;
+  border-radius: 15px;
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.registro {
+  background: #13b5a6;
+  color: white;
+}
+
+.login {
+  background: white;
+  color: #102d58;
+}
+
+.estado {
+  margin-top: 20px;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+<main class="pantalla">
+<img src="/logo.png" class="logo" alt="Buses VientoSur">
+
+<h1>Bienvenido a bordo</h1>
+<p>Tu viaje comienza aquí.<br>
+Viaja cómodo, seguro y conectado.</p>
+
+<div class="botones" id="botones" hidden>
+<a class="boton registro" href="/registro.html">Crear mi cuenta</a>
+<a class="boton login" href="/login.html">Iniciar sesión</a>
+</div>
+
+<p class="estado" id="estado">Verificando acceso...</p>
+</main>
+
+<script>
+(async function() {
+  const token = localStorage.getItem("vientosur_token");
+  const estado = document.getElementById("estado");
+  const botones = document.getElementById("botones");
+
+  if (token) {
+    try {
+      const respuesta = await fetch("/api/auth/yo", {
+        headers: {
+          Authorization: "Bearer " + token
+        },
+        cache: "no-store"
+      });
+
+      if (respuesta.ok) {
+        const datos = await respuesta.json();
+
+        if (datos.ok) {
+          location.replace("/");
+          return;
+        }
+      }
+
+      if (respuesta.status === 401) {
+        localStorage.removeItem("vientosur_token");
+      }
+    } catch (error) {
+      estado.textContent = "No se pudo verificar la conexión.";
+    }
+  }
+
+  botones.hidden = false;
+
+  if (estado.textContent === "Verificando acceso...") {
+    estado.textContent = "Ingresa para comenzar tu viaje.";
+  }
+})();
+</script>
+</body>
+</html>

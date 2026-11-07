@@ -4,6 +4,48 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
+<script>
+(function() {
+  const token = localStorage.getItem("vientosur_token");
+
+  if (!token) {
+    location.replace("/bienvenida.html");
+    return;
+  }
+
+  document.documentElement.style.visibility = "hidden";
+
+  fetch("/api/auth/yo", {
+    headers: {
+      Authorization: "Bearer " + token
+    },
+    cache: "no-store"
+  })
+  .then(async respuesta => {
+    if (respuesta.status === 401) {
+      localStorage.removeItem("vientosur_token");
+      location.replace("/bienvenida.html");
+      return;
+    }
+
+    if (!respuesta.ok) {
+      throw new Error("No se pudo verificar la sesión");
+    }
+
+    const datos = await respuesta.json();
+
+    if (!datos.ok) {
+      throw new Error("Sesión no verificada");
+    }
+
+    document.documentElement.style.visibility = "visible";
+  })
+  .catch(() => {
+    location.replace("/bienvenida.html");
+  });
+})();
+</script>
+
 <title>Buses VientoSur | Inicio</title>
 
 <style>
