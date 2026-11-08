@@ -774,7 +774,7 @@ app.post("/pagar", async (req, res) => {
 
       notification_url: "https://buses-vientosur.onrender.com/webhook",
       back_urls: {
-        success: `https://buses-vientosur.onrender.com/boleto.html?nombre=${nombre}&correo=${correo}&origen=${origen}&destino=${destino}&fecha=${fecha}&hora=${hora}&asiento=${asiento}`,
+        success: "https://busesvientosur.cl/",
         failure: "https://buses-vientosur.onrender.com/error.html",
         pending: "https://buses-vientosur.onrender.com/pendiente.html"
       },
