@@ -55,8 +55,9 @@ async function enviar() {
 
     const datos = await respuesta.json();
 
+    mensaje.style.color = respuesta.ok ? "green" : "red";
     mensaje.textContent = respuesta.ok
-      ? "Solicitud recibida. Si tu correo está registrado, revisa tu bandeja de entrada y Spam."
+      ? "✓ Solicitud enviada exitosamente. Si tu correo está registrado, revisa tu bandeja de entrada y Spam."
       : (datos.mensaje || "No se pudo procesar la solicitud.");
 
   } catch (error) {
