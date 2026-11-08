@@ -550,5 +550,32 @@ document.getElementById("mes-siguiente")
   });
 
 </script>
+
+<script>
+(async function completarDatosUsuario() {
+  const token = localStorage.getItem("vientosur_token");
+  if (!token) return;
+
+  try {
+    const respuesta = await fetch("/api/auth/yo", {
+      headers: { Authorization: "Bearer " + token }
+    });
+
+    if (!respuesta.ok) return;
+
+    const datos = await respuesta.json();
+    if (!datos.ok || !datos.usuario) return;
+
+    const nombre = document.getElementById("nombre");
+    const correo = document.getElementById("correo");
+
+    if (nombre) nombre.value = datos.usuario.nombre || "";
+    if (correo) correo.value = datos.usuario.correo || "";
+  } catch (error) {
+    console.error("No se pudieron cargar los datos del usuario");
+  }
+})();
+</script>
+
 </body>
 </html>
