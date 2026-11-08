@@ -57,6 +57,107 @@
   color: white;
 }
 </style>
+
+<style>
+.fecha-contenedor {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.fecha-contenedor #fecha {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  height: 58px;
+  box-sizing: border-box;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.fecha-contenedor #abrir-calendario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 60px;
+  width: 60px;
+  min-height: 58px;
+  padding: 0;
+  background: #e8f2ff;
+  border: 1px solid #b8cce6;
+  border-radius: 12px;
+  font-size: 27px;
+  color: #12365d;
+}
+
+.calendario-panel[hidden] {
+  display: none !important;
+}
+
+.calendario-panel {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  margin-top: 8px;
+  border: 1px solid #c7d8eb;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 8px 25px #123c6820;
+}
+
+.calendario-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.calendario-cabecera button {
+  width: 42px;
+  min-height: 42px;
+  padding: 0;
+  background: #0758b5;
+  color: white;
+  font-size: 26px;
+}
+
+.calendario-dias {
+  display: grid;
+  grid-template-columns: repeat(7,minmax(0,1fr));
+  gap: 4px;
+  text-align: center;
+}
+
+.calendario-dias span {
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.calendario-dias button {
+  width: 100%;
+  min-height: 39px;
+  padding: 4px 0;
+  border-radius: 8px;
+  background: #edf4ff;
+  color: #12365d;
+  font-size: 14px;
+}
+
+.calendario-dias button:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+}
+
+.calendario-dias button.elegida {
+  background: #0758b5;
+  color: white;
+}
+</style>
 </head>
 <body>
 
@@ -107,7 +208,21 @@
 <label for="fecha">Fecha de viaje</label>
 <div class="fecha-contenedor">
   <input id="fecha" name="fecha" type="date"
-    aria-label="Seleccionar fecha del viaje">
+    aria-label="Fecha del viaje" readonly>
+  <button type="button" id="abrir-calendario"
+    aria-label="Abrir calendario">📅</button>
+</div>
+<div id="calendario-panel" class="calendario-panel" hidden>
+  <div class="calendario-cabecera">
+    <button type="button" id="mes-anterior" aria-label="Mes anterior">‹</button>
+    <strong id="calendario-mes"></strong>
+    <button type="button" id="mes-siguiente" aria-label="Mes siguiente">›</button>
+  </div>
+  <div class="calendario-dias">
+    <span>Lu</span><span>Ma</span><span>Mi</span>
+    <span>Ju</span><span>Vi</span><span>Sá</span><span>Do</span>
+  </div>
+  <div id="calendario-fechas" class="calendario-dias"></div>
 </div>
 <p style="font-size:13px;color:#526781;margin:5px 0 12px">
 La fecha de hoy aparece automáticamente. Puedes cambiarla.
@@ -335,6 +450,104 @@ function irAAsientos() {
     "&correo=" + correo +
     "&precio=" + window.precioSeleccionado;
 }
+
+
+let mesVisible = null;
+
+function fechaISO(anio, mes, dia) {
+  return anio + "-" +
+    String(mes + 1).padStart(2,"0") + "-" +
+    String(dia).padStart(2,"0");
+}
+
+function dibujarCalendario() {
+  const fecha = document.getElementById("fecha").value ||
+    fechaActualChile();
+
+  if (!mesVisible) {
+    const partes = fecha.split("-").map(Number);
+    mesVisible = new Date(partes[0], partes[1] - 1, 1);
+  }
+
+  const anio = mesVisible.getFullYear();
+  const mes = mesVisible.getMonth();
+
+  document.getElementById("calendario-mes").textContent =
+    new Intl.DateTimeFormat("es-CL", {
+      month: "long",
+      year: "numeric"
+    }).format(mesVisible);
+
+  const contenedor =
+    document.getElementById("calendario-fechas");
+
+  contenedor.innerHTML = "";
+
+  const primerDia = (new Date(anio, mes, 1).getDay() + 6) % 7;
+  const totalDias = new Date(anio, mes + 1, 0).getDate();
+
+  for (let i = 0; i < primerDia; i++) {
+    contenedor.appendChild(document.createElement("span"));
+  }
+
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const valor = fechaISO(anio, mes, dia);
+    const boton = document.createElement("button");
+
+    boton.type = "button";
+    boton.textContent = dia;
+    boton.disabled = valor < fechaActualChile();
+
+    if (valor === fecha) boton.classList.add("elegida");
+
+    boton.addEventListener("click", () => {
+      const campo = document.getElementById("fecha");
+      campo.value = valor;
+
+      document.getElementById("calendario-panel").hidden = true;
+
+      campo.dispatchEvent(new Event("change", {bubbles:true}));
+    });
+
+    contenedor.appendChild(boton);
+  }
+
+  const hoy = fechaActualChile().slice(0,7);
+  const visible = fechaISO(anio,mes,1).slice(0,7);
+
+  document.getElementById("mes-anterior").disabled =
+    visible <= hoy;
+}
+
+const panelCalendario =
+  document.getElementById("calendario-panel");
+
+function alternarCalendario() {
+  panelCalendario.hidden = !panelCalendario.hidden;
+
+  if (!panelCalendario.hidden) {
+    mesVisible = null;
+    dibujarCalendario();
+  }
+}
+
+document.getElementById("abrir-calendario")
+  .addEventListener("click", alternarCalendario);
+
+document.getElementById("fecha")
+  .addEventListener("click", alternarCalendario);
+
+document.getElementById("mes-anterior")
+  .addEventListener("click", () => {
+    mesVisible.setMonth(mesVisible.getMonth() - 1);
+    dibujarCalendario();
+  });
+
+document.getElementById("mes-siguiente")
+  .addEventListener("click", () => {
+    mesVisible.setMonth(mesVisible.getMonth() + 1);
+    dibujarCalendario();
+  });
 
 </script>
 </body>
