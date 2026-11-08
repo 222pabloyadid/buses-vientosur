@@ -463,7 +463,7 @@ try {
   .then(data => {
     if (!data.init_point || !/^https:\/\//.test(data.init_point)) {
       console.error("Respuesta de pago:", data);
-      alert("No se pudo iniciar el pago. Intenta nuevamente.");
+      alert("Error al iniciar pago: " + (data.error || data.mensaje || "Error desconocido"));
       return;
     }
 
