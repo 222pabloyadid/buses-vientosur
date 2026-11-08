@@ -280,6 +280,12 @@ app.use(
 
 
 
+
+app.use(
+  "/api/admin/estudiantes",
+  require("./admin-estudiantes.js")(supabase)
+);
+
 app.use(express.static("public"));
 app.use(express.static(__dirname));
 
@@ -517,27 +523,64 @@ app.get("/asientos", async (req, res) => {
 
 
 // ⏳ RESERVA TEMPORAL
+
+
 app.post("/reservar", async (req, res) => {
-  const { asiento, fecha, hora } = req.body;
+  try {
+    const { asiento, fecha, hora } = req.body;
+    const numero = Number(asiento);
 
-  console.log("RESERVANDO:", asiento, fecha, hora);
-  const expira = new Date(Date.now() + 2 * 60 * 1000);
-
-  const { error } = await supabase.from("bloqueos").insert([
-    {
-      asiento,
-      fecha,
-      hora,
-      expires_at: expira
+    if (
+      !Number.isInteger(numero) ||
+      numero < 1 ||
+      numero > 29
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: "Asiento inválido."
+      });
     }
-  ]);
 
-  if (error) {
-    console.log("ERROR RESERVA:", error);
-    return res.status(500).json({ error: "error reservando" });
+    if (
+      typeof fecha !== "string" ||
+      !/^\\d{4}-\\d{2}-\\d{2}$/.test(fecha) ||
+      typeof hora !== "string" ||
+      !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(hora)
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: "Fecha u horario inválido."
+      });
+    }
+
+    const { data, error } = await supabase.rpc(
+      "reservar_asiento_seguro",
+      {
+        p_asiento: numero,
+        p_fecha: fecha,
+        p_hora: hora
+      }
+    );
+
+    if (error) throw error;
+
+    if (data !== true) {
+      return res.status(409).json({
+        ok: false,
+        error: "El asiento ya está ocupado o los datos son inválidos."
+      });
+    }
+
+    return res.json({ ok: true });
+
+  } catch (error) {
+    console.error("ERROR RESERVA:", error);
+
+    return res.status(500).json({
+      ok: false,
+      error: "No se pudo reservar el asiento."
+    });
   }
-
-  res.json({ ok: true });
 });
 
 
@@ -558,12 +601,149 @@ app.post("/comprar", async (req, res) => {
 // Enlaces administrativos antiguos deshabilitados.
 // El control se realizará desde el panel privado.
 
+
+// CONSULTA PUBLICA DE PASE ESCOLAR
+const consultasEstudiantes = new Map();
+
+app.post("/api/estudiantes/consultar", async (req, res) => {
+  const ip = req.ip || "desconocida";
+  const ahora = Date.now();
+  const registro = consultasEstudiantes.get(ip) || {
+    cantidad: 0,
+    inicio: ahora
+  };
+
+  if (ahora - registro.inicio > 60000) {
+    registro.cantidad = 0;
+    registro.inicio = ahora;
+  }
+
+  registro.cantidad++;
+  consultasEstudiantes.set(ip, registro);
+
+  if (registro.cantidad > 10) {
+    return res.status(429).json({
+      ok: false,
+      mensaje: "Demasiados intentos. Espera un minuto."
+    });
+  }
+
+  try {
+    const { validarEstudiante } = require("./validar-estudiante");
+
+    const pase = await validarEstudiante(
+      supabase,
+      req.body.rut
+    );
+
+    return res.json({
+      ok: true,
+      origen: pase.origen,
+      destino: pase.destino,
+      precio: pase.precio
+    });
+
+  } catch (error) {
+    if (error.message === "RUT inválido.") {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Revisa el RUT ingresado."
+      });
+    }
+
+    if (
+      error.message === "Pase escolar no registrado." ||
+      error.message === "Pase escolar no habilitado." ||
+      error.message === "Pase escolar vencido."
+    ) {
+      return res.status(403).json({
+        ok: false,
+        mensaje: "Pase no disponible. Consulta con VientoSur."
+      });
+    }
+
+    console.error("CONSULTA PASE:", error);
+    return res.status(500).json({
+      ok: false,
+      mensaje: "No se pudo consultar el pase."
+    });
+  }
+});
+
 app.post("/pagar", async (req, res) => {
   try {
     const { nombre, correo, origen, destino, fecha, hora, asiento } = req.body;
    
     const clave = `${origen}_${destino}`;
-    const precio = tarifas[clave];
+
+
+    const numeroAsiento = Number(asiento);
+
+    if (!Number.isInteger(numeroAsiento) ||
+        numeroAsiento < 1 || numeroAsiento > 29) {
+      return res.status(400).json({
+        error: "Asiento invalido"
+      });
+    }
+
+    if (typeof fecha !== "string" ||
+        !/^\\d{4}-\\d{2}-\\d{2}$/.test(fecha) ||
+        typeof hora !== "string" ||
+        !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(hora)) {
+      return res.status(400).json({
+        error: "Fecha u horario invalido"
+      });
+    }
+
+    const partesFecha = fecha.split("-").map(Number);
+    const diaSemana = new Date(Date.UTC(
+      partesFecha[0], partesFecha[1] - 1, partesFecha[2]
+    )).getUTCDay();
+
+    const dia = diaSemana === 0 ? "domingo" :
+      diaSemana === 6 ? "sabado" : "semana";
+
+    const parametros = new URLSearchParams({
+      dia, origen, destino, fecha
+    });
+
+    const urlBase = req.protocol + "://" + req.get("host");
+    const respuestaHorarios = await fetch(
+      urlBase + "/horarios?" + parametros.toString()
+    );
+
+    if (!respuestaHorarios.ok) {
+      return res.status(503).json({
+        error: "No se pudo verificar el horario"
+      });
+    }
+
+    const datosHorarios = await respuestaHorarios.json();
+    const lista = datosHorarios.horarios || [];
+
+    if (!lista.some(item =>
+      String(typeof item === "string" ? item : item.hora) === String(hora)
+    )) {
+      return res.status(400).json({
+        error: "Horario no disponible"
+      });
+    }
+
+    let precio = tarifas[clave];
+
+    if (req.body.tipo_pasaje === "estudiante") {
+      const { validarEstudiante } = require("./validar-estudiante");
+
+      const pase = await validarEstudiante(
+        supabase,
+        req.body.rut_estudiante,
+        origen,
+        destino
+      );
+
+      precio = pase.precio;
+    }
+
     
     if (!precio) {
       return res.status(400).json({ error: "Ruta sin tarifa" });

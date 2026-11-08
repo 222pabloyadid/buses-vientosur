@@ -444,6 +444,31 @@ html, body {
 /* FIN AJUSTE VIENTOSUR */
 
 </style>
+
+<style>
+.opcion-estudiante {
+  background: linear-gradient(145deg,#078ee9,#063b88) !important;
+  border: 2px solid #ffd54a !important;
+  box-shadow: 0 5px 16px rgba(4,67,142,.25);
+  color: white !important;
+}
+.opcion-estudiante .icono {
+  background: rgba(255,255,255,.17) !important;
+}
+.opcion-estudiante .icono svg {
+  stroke: white !important;
+  fill: none !important;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.opcion-estudiante strong {
+  color: #ffe36b !important;
+}
+.opcion-estudiante small {
+  color: white !important;
+}
+</style>
 </head>
 
 <body>
@@ -478,15 +503,16 @@ html, body {
       <small>Reserva tu asiento</small>
     </a>
 
-    <a href="/compra.html" class="opcion">
+    <a href="/estudiantes.html" class="opcion opcion-estudiante">
       <span class="icono">
-        <svg viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="9"/>
-          <path d="M12 7v5l4 2"/>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M2 9l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c4 3 8 3 12 0v-5"/>
+          <path d="M22 9v7"/>
         </svg>
       </span>
-      <strong>Horarios</strong>
-      <small>Consulta las salidas</small>
+      <strong>Pasaje Estudiante</strong>
+      <small>Compra con tu RUT</small>
     </a>
 
     <button class="opcion" disabled>

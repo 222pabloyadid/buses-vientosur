@@ -413,15 +413,31 @@ async function pagar() {
 const fecha = params.get("fecha");
 const hora = params.get("hora");
 
-await fetch("/reservar", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    asiento: asientoSeleccionado,
-    fecha: fecha,
-    hora: hora
-  })
-});
+
+const botonPagar = document.querySelector('button[onclick="pagar()"]');
+
+if (botonPagar && botonPagar.disabled) return;
+if (botonPagar) botonPagar.disabled = true;
+
+try {
+  const respuestaReserva = await fetch("/reservar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      asiento: asientoSeleccionado,
+      fecha: fecha,
+      hora: hora
+    })
+  });
+
+  const datosReserva = await respuestaReserva.json();
+
+  if (!respuestaReserva.ok || !datosReserva.ok) {
+    alert(datosReserva.error || "No se pudo reservar el asiento.");
+    window.location.reload();
+    return;
+  }
+
 
   await fetch("/pagar", {
     method: "POST",
@@ -436,7 +452,11 @@ await fetch("/reservar", {
       precio: precio,
       fecha: fecha,
       hora: hora,
-      asiento: asientoSeleccionado
+      asiento: asientoSeleccionado,
+      tipo_pasaje: params.get("tipo_pasaje") === "estudiante"
+        ? "estudiante" : "normal",
+      rut_estudiante: params.get("tipo_pasaje") === "estudiante"
+        ? params.get("rut_estudiante") : null
     })
   })
   .then(res => res.json())
@@ -449,7 +469,14 @@ await fetch("/reservar", {
 
     window.location.href = data.init_point;
   });
-}  
+
+} catch (error) {
+  console.error("ERROR COMPRA:", error);
+  alert("No se pudo iniciar la compra. Intenta nuevamente.");
+} finally {
+  if (botonPagar) botonPagar.disabled = false;
+}
+}
 
 </script>
 

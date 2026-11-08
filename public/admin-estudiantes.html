@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administrar estudiantes | Buses VientoSur</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef4fb;font-family:Arial,sans-serif;color:#173453}
+header{background:linear-gradient(120deg,#07366f,#0876c9);color:white;padding:24px 18px;text-align:center}
+header h1{font-size:23px;margin:8px 0}
+main{max-width:580px;margin:20px auto;padding:0 14px}
+.card{background:white;border-radius:18px;padding:20px;box-shadow:0 6px 25px #163b6015;margin-bottom:16px}
+label{display:block;font-weight:bold;margin:15px 0 7px}
+input,select{width:100%;padding:14px;border:1px solid #cbd8e7;border-radius:10px;font-size:16px;background:white}
+button{border:0;border-radius:11px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer}
+.primario{background:#0866bd;color:white;width:100%;margin-top:15px}
+.acciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.renovar{background:#087a61;color:white}
+.bloquear{background:#ffdf91;color:#503800}
+.desactivar{background:#ffe4e4;color:#a21c1c}
+.activar{background:#dcecff;color:#0753a1}
+.estado{padding:12px;border-radius:10px;background:#edf4fb;margin-top:14px;font-weight:bold}
+.aviso{margin-top:14px;white-space:pre-wrap}
+small{color:#63758a}
+</style>
+</head>
+<body>
+<header>
+<div style="font-size:42px">🎓</div>
+<h1>Administrar estudiantes</h1>
+<div>Buses VientoSur · Pase escolar</div>
+</header>
+<main>
+<section class="card">
+<label for="clave">Clave de administrador</label>
+<input id="clave" type="password" autocomplete="off" placeholder="Clave administrativa">
+<small>Se utiliza para autorizar cada operación. No se guarda en el navegador.</small>
+<label for="rut">RUT del estudiante</label>
+<input id="rut" placeholder="12.345.678-9" autocomplete="off">
+<button class="primario" onclick="buscar()">🔎 Buscar por RUT</button>
+</section>
+
+<section class="card">
+<label for="nombre">Nombre completo</label>
+<input id="nombre" placeholder="Nombre y apellido">
+
+<label for="origen">Origen autorizado</label>
+<select id="origen"></select>
+
+<label for="destino">Destino autorizado</label>
+<select id="destino"></select>
+
+<label for="precio_estudiante">Valor del pasaje estudiante ($)</label>
+<input
+  id="precio_estudiante"
+  type="number"
+  min="1"
+  step="1"
+  placeholder="Ejemplo: 1700"
+  required
+>
+
+<label for="vencimiento">Vencimiento del pase</label>
+<input id="vencimiento" type="date">
+
+<div class="estado" id="estado">Nuevo estudiante</div>
+
+<button class="primario" onclick="guardar()">💾 Guardar / Renovar pase</button>
+
+<div class="acciones">
+<button class="bloquear" onclick="cambiarEstado('bloqueado')">Bloquear</button>
+<button class="activar" onclick="cambiarEstado('activo')">Activar</button>
+<button class="desactivar" onclick="cambiarEstado('desactivado')">Desactivar</button>
+</div>
+<div id="aviso" class="aviso" role="status"></div>
+</section>
+</main>
+<script>
+const lugares=[
+"Temuco","Freire","Pitrufquén","Lolén","Arauco",
+"Parada 6","Las Dichas","Límite","Barros Arana",
+"Parada 31","Teodoro Schmidt","Hualpín","Toltén"
+];
+
+for(const id of ["origen","destino"]){
+  const select=document.getElementById(id);
+  select.appendChild(new Option("Selecciona una localidad",""));
+  lugares.forEach(x=>select.appendChild(new Option(x,x)));
+}
+
+let registroEncontrado=false;
+
+function avisar(mensaje,error=false){
+  const elemento=document.getElementById("aviso");
+  elemento.textContent=mensaje;
+  elemento.style.color=error?"#ad2525":"#087a61";
+}
+
+function encabezados(){
+  const clave=document.getElementById("clave").value.trim();
+  if(!clave)throw new Error("Ingresa tu clave administrativa.");
+  return {
+    "Authorization":"Bearer "+clave,
+    "Content-Type":"application/json"
+  };
+}
+
+function obtenerRut(){
+  const rut=document.getElementById("rut").value.trim();
+  if(!rut)throw new Error("Ingresa el RUT.");
+  return rut;
+}
+
+async function peticion(url,opciones={}){
+  const res=await fetch(url,{
+    ...opciones,
+    headers:encabezados()
+  });
+  const datos=await res.json();
+  if(!res.ok||!datos.ok){
+    throw new Error(datos.mensaje||"No se pudo completar la operación.");
+  }
+  return datos;
+}
+
+async function buscar(){
+  try{
+    const rut=obtenerRut();
+    avisar("Buscando estudiante...");
+    const r=await peticion(
+      "/api/admin/estudiantes/buscar?rut="+encodeURIComponent(rut)
+    );
+    const e=r.estudiante;
+    registroEncontrado=!!e;
+
+    document.getElementById("nombre").value=e?.nombre||"";
+    document.getElementById("origen").value=e?.origen||"";
+    document.getElementById("destino").value=e?.destino||"";
+    document.getElementById("vencimiento").value=e?.vencimiento||"";
+    document.getElementById("precio_estudiante").value=e?.precio_estudiante||"";
+
+    document.getElementById("estado").textContent=e
+      ? "Estado: "+e.estado+
+        (e.estado==="activo" && e.vencimiento<
+          new Intl.DateTimeFormat("en-CA",{
+            timeZone:"America/Santiago",
+            year:"numeric",month:"2-digit",day:"2-digit"
+          }).format(new Date())?" · PASE VENCIDO":"")
+      : "Estudiante no registrado";
+
+    avisar(e?"Ficha encontrada.":"Puedes registrar este estudiante.");
+  }catch(error){avisar(error.message,true)}
+}
+
+async function guardar(){
+  try{
+    const datos={
+      rut:obtenerRut(),
+      nombre:document.getElementById("nombre").value.trim(),
+      origen:document.getElementById("origen").value,
+      destino:document.getElementById("destino").value,
+      vencimiento:document.getElementById("vencimiento").value,
+      precio_estudiante:Number(document.getElementById("precio_estudiante").value)
+    };
+    if(!confirm("¿Guardar y activar este pase escolar?"))return;
+    const r=await peticion("/api/admin/estudiantes/guardar",{
+      method:"POST",
+      body:JSON.stringify(datos)
+    });
+    registroEncontrado=true;
+    document.getElementById("estado").textContent="Estado: activo";
+    avisar(r.mensaje);
+  }catch(error){avisar(error.message,true)}
+}
+
+async function cambiarEstado(estado){
+  try{
+    const rut=obtenerRut();
+    if(!registroEncontrado){
+      throw new Error("Primero busca un estudiante registrado.");
+    }
+    if(!confirm("¿Confirmas cambiar el pase a "+estado+"?"))return;
+    const r=await peticion("/api/admin/estudiantes/estado",{
+      method:"PATCH",
+      body:JSON.stringify({rut,estado})
+    });
+    document.getElementById("estado").textContent="Estado: "+estado;
+    avisar(r.mensaje);
+  }catch(error){avisar(error.message,true)}
+}
+
+document.getElementById("rut").addEventListener("input",()=>{
+  registroEncontrado=false;
+  document.getElementById("estado").textContent="Busca el RUT";
+});
+</script>
+</body>
+</html>

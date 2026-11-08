@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pasaje Estudiante - Buses VientoSur</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef4fb;font-family:Arial,sans-serif;color:#183653}
+header{background:linear-gradient(120deg,#073b80,#087dd4);color:white;text-align:center;padding:28px 15px}
+header h1{font-size:25px;margin:10px 0}
+main{max-width:520px;margin:22px auto;padding:0 15px}
+.card{background:white;border-radius:18px;padding:22px;box-shadow:0 6px 24px #163b6015}
+label{display:block;font-weight:bold;margin:16px 0 8px}
+input{width:100%;padding:15px;border:1px solid #cbd8e7;border-radius:11px;font-size:17px}
+button{width:100%;padding:15px;border:0;border-radius:12px;background:#0768c7;color:white;font-size:17px;font-weight:bold;margin-top:17px;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+.resumen{background:#edf5ff;border-radius:14px;padding:17px;margin-top:18px}
+.precio{font-size:31px;font-weight:bold;color:#075ba9;margin-top:10px}
+.aviso{margin-top:15px;color:#b42323;font-weight:bold}
+small{color:#60758c}
+
+select{
+  width:100%;
+  padding:15px;
+  border:1px solid #cbd8e7;
+  border-radius:11px;
+  font-size:17px;
+  background:white;
+}
+.hora{
+  width:auto;
+  margin:6px;
+  padding:12px 17px;
+  background:#dcecff;
+  color:#075ba9;
+}
+.hora.activa{
+  background:#075ba9;
+  color:white;
+}
+</style>
+</head>
+<body>
+<header>
+<div style="font-size:45px">🎓</div>
+<h1>Pasaje Estudiante</h1>
+<div>Buses VientoSur</div>
+</header>
+<main>
+<section class="card">
+<h2>Consulta tu pase escolar</h2>
+<p>Ingresa tu RUT para consultar tu ruta y tarifa autorizada.</p>
+
+<form id="formulario">
+<label for="rut">RUT del estudiante</label>
+<input id="rut" placeholder="12.345.678-9" autocomplete="off" required>
+<button id="consultar" type="submit">Consultar pase</button>
+</form>
+
+<div id="resultado" hidden>
+<div class="resumen">
+<strong>Ruta autorizada</strong>
+<p id="ruta"></p>
+<strong>Valor del pasaje</strong>
+<div class="precio" id="precio"></div>
+<small>Tarifa válida en ambos sentidos.</small>
+</div>
+
+<label for="sentido">Sentido del viaje</label>
+<select id="sentido">
+<option value="ida">Ida</option>
+<option value="regreso">Regreso</option>
+</select>
+
+<label for="fecha">Fecha del viaje</label>
+<input id="fecha" type="date">
+
+<div id="horarios" class="resumen"></div>
+
+
+<label for="nombre">Nombre del pasajero</label>
+<input id="nombre" type="text" placeholder="Nombre y apellido" autocomplete="name" required>
+
+<label for="correo">Correo electrónico para recibir el boleto</label>
+<input id="correo" type="email" placeholder="tu@email.com" autocomplete="email" required>
+
+<button id="continuar" type="button" disabled>
+Continuar a elegir asiento
+</button>
+
+</div>
+
+<div id="aviso" class="aviso" role="status"></div>
+</section>
+</main>
+
+<script>
+const formulario=document.getElementById("formulario");
+const rutCampo=document.getElementById("rut");
+const resultado=document.getElementById("resultado");
+const aviso=document.getElementById("aviso");
+const boton=document.getElementById("consultar");
+let pase=null;
+
+rutCampo.addEventListener("input",()=>{
+  pase=null;
+  resultado.hidden=true;
+  aviso.textContent="";
+});
+
+formulario.addEventListener("submit",async function(evento){
+  evento.preventDefault();
+  pase=null;
+  resultado.hidden=true;
+  aviso.textContent="";
+  boton.disabled=true;
+  boton.textContent="Consultando...";
+
+  try{
+    const respuesta=await fetch("/api/estudiantes/consultar",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({rut:rutCampo.value.trim()})
+    });
+
+    const datos=await respuesta.json();
+
+    if(!respuesta.ok||!datos.ok){
+      throw new Error(datos.mensaje||"No se pudo consultar el pase.");
+    }
+
+    pase=datos;
+    document.getElementById("ruta").textContent=
+      datos.origen+" ↔️ "+datos.destino;
+    document.getElementById("precio").textContent=
+      "$"+Number(datos.precio).toLocaleString("es-CL");
+    resultado.hidden=false;
+    cargarHorarios();
+
+  }catch(error){
+    aviso.textContent=error.message;
+  }finally{
+    boton.disabled=false;
+    boton.textContent="Consultar pase";
+  }
+});
+
+
+let horarioElegido = "";
+
+function fechaChile(){
+  const partes = new Intl.DateTimeFormat("en-US",{
+    timeZone:"America/Santiago",
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).formatToParts(new Date());
+
+  const valor = tipo => partes.find(p=>p.type===tipo).value;
+  return valor("year")+"-"+valor("month")+"-"+valor("day");
+}
+
+const campoFecha = document.getElementById("fecha");
+campoFecha.value = fechaChile();
+campoFecha.min = fechaChile();
+
+function rutaActual(){
+  const regreso = document.getElementById("sentido").value === "regreso";
+
+  return {
+    origen: regreso ? pase.destino : pase.origen,
+    destino: regreso ? pase.origen : pase.destino
+  };
+}
+
+async function cargarHorarios(){
+  if(!pase)return;
+
+  horarioElegido="";
+  document.getElementById("continuar").disabled=true;
+
+  const contenedor=document.getElementById("horarios");
+  contenedor.textContent="Consultando horarios...";
+
+  const fecha=campoFecha.value;
+
+  if(!fecha || fecha<fechaChile()){
+    contenedor.textContent="Selecciona una fecha válida.";
+    return;
+  }
+
+  const [anio,mes,dia]=fecha.split("-").map(Number);
+  const diaSemana=new Date(anio,mes-1,dia).getDay();
+
+  const tipoDia=diaSemana===0?"domingo":
+    diaSemana===6?"sabado":"semana";
+
+  const ruta=rutaActual();
+
+  try{
+    const parametros=new URLSearchParams({
+      dia:tipoDia,
+      origen:ruta.origen,
+      destino:ruta.destino,
+      fecha:fecha
+    });
+
+    const respuesta=await fetch("/horarios?"+parametros);
+
+    if(!respuesta.ok)throw new Error("Error consultando horarios.");
+
+    const datos=await respuesta.json();
+    const horas=Array.isArray(datos.horarios)?datos.horarios:[];
+
+    const ahora=new Intl.DateTimeFormat("en-GB",{
+      timeZone:"America/Santiago",
+      hour:"2-digit",
+      minute:"2-digit",
+      hourCycle:"h23"
+    }).format(new Date());
+
+    const disponibles=horas.filter(h=>{
+      if(fecha!==fechaChile())return true;
+      return /^\d{1,2}:\d{2}$/.test(String(h)) &&
+        String(h).padStart(5,"0")>ahora;
+    });
+
+    contenedor.textContent="";
+
+    if(!disponibles.length){
+      contenedor.textContent="No hay horarios disponibles.";
+      return;
+    }
+
+    disponibles.forEach(hora=>{
+      const botonHora=document.createElement("button");
+      botonHora.type="button";
+      botonHora.className="hora";
+      botonHora.textContent=hora;
+
+      botonHora.onclick=()=>{
+        contenedor.querySelectorAll(".hora").forEach(b=>{
+          b.classList.remove("activa");
+        });
+
+        botonHora.classList.add("activa");
+        horarioElegido=hora;
+        document.getElementById("continuar").disabled=false;
+      };
+
+      contenedor.appendChild(botonHora);
+    });
+
+  }catch(error){
+    contenedor.textContent="No se pudieron cargar los horarios.";
+  }
+}
+
+document.getElementById("sentido").addEventListener("change",cargarHorarios);
+campoFecha.addEventListener("change",cargarHorarios);
+
+
+document.getElementById("continuar").addEventListener("click",()=>{
+  if(!pase || !horarioElegido)return;
+
+  const nombre=document.getElementById("nombre").value.trim();
+  const correo=document.getElementById("correo").value.trim();
+
+  if(!nombre || !correo){
+    aviso.textContent="Ingresa tu nombre y correo electrónico.";
+    return;
+  }
+
+  if(!document.getElementById("correo").checkValidity()){
+    aviso.textContent="Ingresa un correo electrónico válido.";
+    return;
+  }
+
+  const ruta=rutaActual();
+
+  const parametros=new URLSearchParams({
+    origen:ruta.origen,
+    destino:ruta.destino,
+    fecha:campoFecha.value,
+    hora:horarioElegido,
+    nombre:nombre,
+    correo:correo,
+    precio:String(pase.precio),
+    tipo_pasaje:"estudiante",
+    rut_estudiante:rutCampo.value.trim()
+  });
+
+  window.location.href="/asientos.html?"+parametros.toString();
+});
+</script>
+</body>
+</html>
