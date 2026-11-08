@@ -1,33 +1,33 @@
 const tarifas = {
   // Hacia Freire
-  Tolten_Freire: 3000,
-  Hualpin_Freire: 2700,
-  TeodoroSchmidt_Freire: 2600,
-  BarrosArana_Freire: 2100,
+  Tolten_Freire: 2700,
+  Hualpin_Freire: 2500,
+  TeodoroSchmidt_Freire: 2300,
+  BarrosArana_Freire: 1900,
 
   // Hacia Pitrufquen
-  Tolten_Pitrufquen: 3700,
-  Hualpin_Pitrufquen: 3500,
-  TeodoroSchmidt_Pitrufquen: 3400,
-  BarrosArana_Pitrufquen: 2800,
+  Tolten_Pitrufquen: 3000,
+  Hualpin_Pitrufquen: 2700,
+  TeodoroSchmidt_Pitrufquen: 2600,
+  BarrosArana_Pitrufquen: 2500,
 
   // Desde Temuco hacia paradas
-  Temuco_Lolen: 2100,
-  Temuco_Arauco: 2400,
-  Temuco_Parada21: 2400,
-  Temuco_LasDichas: 2400,
-  Temuco_Limite: 2400,
-  Temuco_BarrosArana: 2800,
-  Temuco_Parada31: 3100,
-  Temuco_TeodoroSchmidt: 3400,
-  Temuco_Hualpin: 3500,
-  Temuco_Tolten: 3700,
+  Temuco_Lolen: 1900,
+  Temuco_Arauco: 2000,
+  Temuco_Parada21: 2100,
+  Temuco_LasDichas: 2100,
+  Temuco_Limite: 2300,
+  Temuco_BarrosArana: 2500,
+  Temuco_Parada31: 2700,
+  Temuco_TeodoroSchmidt: 2800,
+  Temuco_Hualpin: 2900,
+  Temuco_Tolten: 3000,
 
   // HACIA TEMUCO
-  Tolten_Temuco: 3700,
-  Hualpin_Temuco: 3500,
-  TeodoroSchmidt_Temuco: 3400,
-  BarrosArana_Temuco: 2800,
+  Tolten_Temuco: 3000,
+  Hualpin_Temuco: 2900,
+  TeodoroSchmidt_Temuco: 2800,
+  BarrosArana_Temuco: 2500,
 
 };
 

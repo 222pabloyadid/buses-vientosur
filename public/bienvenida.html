@@ -6,63 +6,85 @@
 <meta name="theme-color" content="#102d58">
 <title>Bienvenido | Buses VientoSur</title>
 
+
+
 <style>
 * { box-sizing: border-box; }
+
 html, body {
   margin: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
 }
+
 body {
-  background: #06366a;
+  background: #07376b;
   font-family: Arial, sans-serif;
 }
+
 .pantalla {
   position: relative;
-  width: min(100vw, 77.14dvh);
-  height: min(100dvh, 129.63vw);
-  margin: auto;
-  background: url("/portada-vientosur.png") center / 100% 100% no-repeat;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #07376b;
 }
+
+.portada {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
 .botones {
   position: absolute;
   inset: 0;
 }
+
 .boton {
   position: absolute;
-  left: 8%;
-  width: 84%;
-  height: 8.7%;
   display: block;
-  text-decoration: none;
+  border-radius: 999px;
   font-size: 0;
   color: transparent;
-  border-radius: 999px;
+  text-decoration: none;
 }
-.registro { top: 65.4%; }
-.login { top: 75.5%; }
+
 .estado {
   position: absolute;
-  bottom: 1%;
-  width: 100%;
-  text-align: center;
-  color: transparent;
+  bottom: 0;
   font-size: 0;
+  color: transparent;
 }
+
 [hidden] { display: none !important; }
 </style>
+
+
 
 </head>
 <body>
 
+
 <main class="pantalla">
+  <img class="portada" id="imagenPortada"
+       src="/portada-vientosur.png"
+       alt="Buses VientoSur">
+
   <div class="botones" id="botones" hidden>
-    <a class="boton registro" href="/registro.html" aria-label="Crear mi cuenta">Crear mi cuenta</a>
-    <a class="boton login" href="/login.html" aria-label="Iniciar sesión">Iniciar sesión</a>
+    <a class="boton registro" href="/registro.html"
+       aria-label="Crear mi cuenta">Crear mi cuenta</a>
+    <a class="boton login" href="/login.html"
+       aria-label="Iniciar sesión">Iniciar sesión</a>
   </div>
+
   <p class="estado" id="estado">Verificando acceso...</p>
 </main>
+
 
 
 <script>
@@ -104,5 +126,44 @@ body {
   }
 })();
 </script>
+
+<script>
+(function () {
+  const imagen = document.getElementById("imagenPortada");
+  const registro = document.querySelector(".registro");
+  const login = document.querySelector(".login");
+
+  function ajustar() {
+    if (!imagen.naturalWidth || !imagen.naturalHeight) return;
+
+    const w = innerWidth;
+    const h = innerHeight;
+    const escala = Math.max(
+      w / imagen.naturalWidth,
+      h / imagen.naturalHeight
+    );
+
+    const ancho = imagen.naturalWidth * escala;
+    const alto = imagen.naturalHeight * escala;
+    const x = (w - ancho) / 2;
+    const y = (h - alto) / 2;
+
+    function colocar(elemento, izquierda, arriba, anchoBoton, altoBoton) {
+      elemento.style.left = (x + ancho * izquierda) + "px";
+      elemento.style.top = (y + alto * arriba) + "px";
+      elemento.style.width = (ancho * anchoBoton) + "px";
+      elemento.style.height = (alto * altoBoton) + "px";
+    }
+
+    colocar(registro, .083, .648, .834, .087);
+    colocar(login, .083, .748, .834, .087);
+  }
+
+  imagen.addEventListener("load", ajustar);
+  window.addEventListener("resize", ajustar);
+  ajustar();
+})();
+</script>
+
 </body>
 </html>
