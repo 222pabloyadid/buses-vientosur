@@ -285,6 +285,9 @@ app.use(express.static(__dirname));
 
 // IMPORTAR ARCHIVOS
 const horarios = require("./horarios.js");
+
+require("./control-horarios.js")(app, supabase);
+
 const tarifas = require("./tarifas.js");
 const estudiantes = require("./data/estudiantes");
 //const bloqueados = require("./bloqueos.js");
@@ -300,7 +303,7 @@ app.get("/", (req, res) => {
 
 
 // 🔎 BUSCAR HORARIOS
-app.get("/horarios", (req, res) => {
+app.get("/horarios", async (req, res) => {
   const { dia, origen, destino, fecha } = req.query;
 
   let tipoDia = "semana";
@@ -378,11 +381,66 @@ if (fecha) {
 
 
 }
-resultado = resultado.filter(h => {
-  const horaStr = typeof h === "string" ? h : h.hora;
-  return !bloqueados.includes(horaStr);
-  
-});
+
+
+
+  // BLOQUEO NUEVO POR BUS, SENTIDO Y TIPO DE DIA
+  try {
+    const sentidoControl = origen === "Temuco"
+      ? "Temuco_Tolten"
+      : "Tolten_Temuco";
+
+    const { data, error } = await supabase
+      .from("bloqueos_salidas")
+      .select("hora")
+      .eq("sentido", sentidoControl)
+      .eq("tipo_dia", tipoDia);
+
+    if (error) throw error;
+
+    const cerradas = new Set(
+      (data || []).map(x => x.hora)
+    );
+
+    const paradas = {
+      Tolten: "Tolten_Temuco",
+      Hualpin: "Hualpin_Temuco",
+      TeodoroSchmidt: "TeodoroSchmidt_Temuco",
+      BarrosArana: "BarrosArana_Temuco",
+      Pitrufquen: "Pitrufquen_Temuco"
+    };
+
+    resultado = resultado.filter(item => {
+      const hora = typeof item === "string"
+        ? item : item.hora;
+
+      if (origen === "Temuco") {
+        return !cerradas.has(hora);
+      }
+
+      const principales =
+        horarios[tipoDia].Tolten_Temuco || [];
+
+      const lista =
+        horarios[tipoDia][paradas[origen]] || [];
+
+      const posicion = lista.indexOf(hora);
+
+      const salida = origen === "Pitrufquen"
+        ? "06:30"
+        : posicion >= 0 && principales[posicion]
+          ? principales[posicion] : hora;
+
+      return !cerradas.has(salida);
+    });
+
+  } catch (error) {
+    console.error("ERROR BLOQUEOS SALIDAS:", error);
+    return res.status(503).json({
+      ok: false,
+      error: "No se pudo verificar la disponibilidad"
+    });
+  }
 
   resultado = filtrarPorTiempo(resultado, fecha);
 
@@ -497,45 +555,8 @@ app.post("/comprar", async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/admin/bloquear", async (req, res) => {
-  const { hora, key } = req.query;
-
-  if (key !== "1234") {
-    return res.json({ ok: false, error: "No autorizado" });
-  }
-
-  if (!hora) {
-    return res.json({ ok: false, error: "Falta hora" });
-  }
-
-  if (!bloqueados.includes(hora)) {
-    await supabase
-      .from("horarios_bloqueados")
-      .insert({ hora });
-  
-    await cargarBloqueos();
-  }
-  
-  
-  res.json({ ok: true, bloqueados });
-});
-
-app.get("/admin/desbloquear", async (req, res) => {
-  const { hora, key } = req.query;
-
-  if (key !== "1234") {
-    return res.json({ ok: false, error: "No autorizado" });
-}
-
-  await supabase
-    .from("horarios_bloqueados")
-    .delete()
-    .eq("hora", hora);
-
-  await cargarBloqueos();
-
-  res.json({ ok: true, bloqueados });
-});
+// Enlaces administrativos antiguos deshabilitados.
+// El control se realizará desde el panel privado.
 
 app.post("/pagar", async (req, res) => {
   try {

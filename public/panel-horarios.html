@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Control de Horarios - Viento Sur</title>
+<style>
+body{font-family:Arial,sans-serif;background:#edf3f9;margin:0;color:#172b4d}
+header{background:#124c91;color:white;padding:20px;text-align:center}
+main{max-width:650px;margin:20px auto;padding:15px}
+section,.tarjeta{background:white;padding:16px;border-radius:14px;margin-bottom:12px}
+input,select{padding:13px;border:1px solid #bbb;border-radius:9px;width:100%;box-sizing:border-box;margin:8px 0}
+button{border:0;border-radius:10px;padding:12px;color:white;font-weight:bold;cursor:pointer}
+.verde{background:#16803c}.rojo{background:#c62828}
+.fila{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #eee;padding:12px 0}
+small{color:#63748b}
+#panel{display:none}
+</style>
+</head>
+<body>
+<header>
+<h2>🚌 BUSES VIENTO SUR</h2>
+<p>Control privado de horarios</p>
+</header>
+<main>
+<section id="login">
+<h3>🔐 Acceso administrador</h3>
+<input id="clave" type="password" placeholder="Contraseña">
+<button class="verde" onclick="entrar()">Ingresar</button>
+<p id="mensaje"></p>
+</section>
+
+<div id="panel">
+<section>
+<label>Tipo de día</label>
+<select id="dia" onchange="cargar()">
+<option value="semana">Lunes a viernes</option>
+<option value="sabado">Sábado</option>
+<option value="domingo">Domingo</option>
+</select>
+</section>
+<section>
+<h3>Desde Toltén hacia Temuco</h3>
+<div id="tolten"></div>
+</section>
+<section>
+<h3>Desde Temuco hacia Toltén</h3>
+<div id="temuco"></div>
+</section>
+</div>
+</main>
+<script>
+let claveAdmin="";
+let bloqueos=[];
+let bloqueosAntiguos=[];
+
+const buses=[
+["05:00","05:25","05:50","06:05"],
+["05:30","05:55","06:20","06:35"],
+["06:00","06:25","06:50","07:05"],
+["06:30","06:55","07:20","07:35"],
+["07:30","07:55","08:20","08:35"],
+["08:30","08:55","09:20","09:35"],
+["10:20","10:50","11:10","11:25"],
+["12:00","12:25","12:45","13:00"],
+["13:00","13:25","13:45","14:00"],
+["15:15","15:40","16:00","16:15"],
+["17:05","17:30","17:50","18:05"]
+];
+
+const salidasTemuco=[
+"07:40","08:45","09:00","10:30","11:50",
+"13:50","14:30","14:40","15:25","15:40",
+"15:50","16:15","16:45","17:15","17:25",
+"17:45","18:00","18:30","19:00","19:15",
+"19:50","20:30","21:00"
+];
+
+const especiales={
+sabado:{tolten:["07:00","12:45"],temuco:["10:00","15:30"]},
+domingo:{tolten:["09:15","14:00","17:20"],temuco:["11:50","16:30","20:15"]}
+};
+
+async function peticion(url,opciones={}){
+const r=await fetch(url,{
+...opciones,
+headers:{
+"Authorization":"Bearer "+claveAdmin,
+...(opciones.headers||{})
+}
+});
+if(!r.ok)throw Error("No autorizado o error del servidor");
+return r.json();
+}
+
+async function entrar(){
+claveAdmin=document.getElementById("clave").value;
+try{
+await cargarDatos();
+document.getElementById("login").style.display="none";
+document.getElementById("panel").style.display="block";
+document.getElementById("clave").value="";
+renderizar();
+}catch(e){
+document.getElementById("mensaje").textContent=e.message;
+}
+}
+
+async function cargarDatos(){
+const r=await peticion("/api/admin/control-horarios");
+bloqueos=r.bloqueos||[];
+bloqueosAntiguos=r.bloqueos_antiguos||[];
+}
+
+function estaBloqueado(sentido,dia,hora){
+return bloqueos.some(x=>x.sentido===sentido&&x.tipo_dia===dia&&x.hora===hora);
+}
+
+function agregarFila(contenedor,titulo,detalle,sentido,dia,hora){
+
+const bloqueado=estaBloqueado(sentido,dia,hora);
+const fila=document.createElement("div");
+fila.className="fila";
+const info=document.createElement("div");
+const nombre=document.createElement("strong");
+nombre.textContent=titulo;
+const descripcion=document.createElement("small");
+descripcion.textContent=detalle;
+info.append(nombre,document.createElement("br"),descripcion);
+const boton=document.createElement("button");
+boton.className=bloqueado?"rojo":"verde";
+boton.textContent=bloqueado?"Bloqueado":"Activado";
+boton.onclick=async()=>{
+boton.disabled=true;
+try{
+await peticion("/api/admin/control-horarios",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({sentido,tipo_dia:dia,hora,bloquear:!bloqueado})
+});
+await cargarDatos();
+renderizar();
+}catch(e){alert("No se pudo guardar el cambio: "+e.message);boton.disabled=false;}
+};
+fila.append(info,boton);
+contenedor.append(fila);
+}
+
+function renderizar(){
+const dia=document.getElementById("dia").value;
+const tolten=document.getElementById("tolten");
+const temuco=document.getElementById("temuco");
+tolten.replaceChildren();
+temuco.replaceChildren();
+const recorridos=dia==="semana"?buses.map(x=>x):
+especiales[dia].tolten.map(x=>[x]);
+const salidas=dia==="semana"?salidasTemuco:especiales[dia].temuco;
+
+recorridos.forEach((horas,i)=>{
+agregarFila(tolten,"Bus "+(i+1)+" · "+horas[0],
+horas.join(" / "),"Tolten_Temuco",dia,horas[0]);
+});
+salidas.forEach(h=>{
+agregarFila(temuco,"Salida "+h,"Temuco → Toltén","Temuco_Tolten",dia,h);
+});
+}
+
+async function cargar(){
+try{await cargarDatos();renderizar();}
+catch(e){alert(e.message);}
+}
+</script>
+</body>
+</html>
