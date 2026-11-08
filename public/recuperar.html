@@ -31,15 +31,40 @@ button{background:#087f83;color:white;border:0}
 <script>
 let cliente = null;
 
+
 async function enviar() {
   const correo = document.getElementById("correo").value.trim();
-  const respuesta = await fetch("/api/auth/recuperar", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({correo})
-  });
-  const datos = await respuesta.json();
-  document.getElementById("mensaje").textContent = datos.mensaje;
+  const mensaje = document.getElementById("mensaje");
+  const boton = document.querySelector("#solicitar button");
+
+  if (!correo || !document.getElementById("correo").checkValidity()) {
+    mensaje.textContent = "Ingresa un correo electrónico válido.";
+    return;
+  }
+
+  boton.disabled = true;
+  boton.textContent = "Enviando...";
+  mensaje.textContent = "Procesando solicitud...";
+
+  try {
+    const respuesta = await fetch("/api/auth/recuperar", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({correo})
+    });
+
+    const datos = await respuesta.json();
+
+    mensaje.textContent = respuesta.ok
+      ? "Solicitud recibida. Si tu correo está registrado, revisa tu bandeja de entrada y Spam."
+      : (datos.mensaje || "No se pudo procesar la solicitud.");
+
+  } catch (error) {
+    mensaje.textContent = "Error de conexión. Intenta nuevamente más tarde.";
+  } finally {
+    boton.disabled = false;
+    boton.textContent = "Enviar enlace";
+  }
 }
 
 async function iniciar() {
