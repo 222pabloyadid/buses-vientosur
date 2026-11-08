@@ -69,8 +69,8 @@ select{
 
 <label for="sentido">Sentido del viaje</label>
 <select id="sentido">
-<option value="ida">Ida</option>
-<option value="regreso">Regreso</option>
+<option value="ida"></option>
+<option value="regreso"></option>
 </select>
 
 <label for="fecha">Fecha del viaje</label>
@@ -135,6 +135,10 @@ formulario.addEventListener("submit",async function(evento){
       datos.origen+" ↔️ "+datos.destino;
     document.getElementById("precio").textContent=
       "$"+Number(datos.precio).toLocaleString("es-CL");
+    const selector = document.getElementById("sentido");
+    selector.options[0].textContent = datos.origen + " → " + datos.destino;
+    selector.options[1].textContent = datos.destino + " → " + datos.origen;
+    selector.value = "ida";
     resultado.hidden=false;
     cargarHorarios();
 
