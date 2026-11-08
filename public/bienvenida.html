@@ -5,99 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#102d58">
 <title>Bienvenido | Buses VientoSur</title>
+
 <style>
 * { box-sizing: border-box; }
-
 html, body {
   margin: 0;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
 }
-
 body {
+  background: #06366a;
   font-family: Arial, sans-serif;
-  background: linear-gradient(150deg, #102d58, #245582);
-  color: white;
 }
-
 .pantalla {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-  text-align: center;
+  position: relative;
+  width: min(100vw, 77.14dvh);
+  height: min(100dvh, 129.63vw);
+  margin: auto;
+  background: url("/portada-vientosur.png") center / 100% 100% no-repeat;
 }
-
-.logo {
-  width: min(75vw, 290px);
-  background: white;
-  border-radius: 25px;
-  padding: 18px;
-  margin-bottom: 28px;
-}
-
-h1 {
-  font-size: 30px;
-  margin: 0 0 12px;
-}
-
-p {
-  color: #d5edf5;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
 .botones {
-  width: 100%;
-  max-width: 360px;
-  margin-top: 30px;
-  display: grid;
-  gap: 15px;
+  position: absolute;
+  inset: 0;
 }
-
 .boton {
+  position: absolute;
+  left: 8%;
+  width: 84%;
+  height: 8.7%;
   display: block;
-  padding: 18px;
-  border-radius: 15px;
   text-decoration: none;
-  font-size: 17px;
-  font-weight: bold;
+  font-size: 0;
+  color: transparent;
+  border-radius: 999px;
 }
-
-.registro {
-  background: #13b5a6;
-  color: white;
-}
-
-.login {
-  background: white;
-  color: #102d58;
-}
-
+.registro { top: 65.4%; }
+.login { top: 75.5%; }
 .estado {
-  margin-top: 20px;
-  font-size: 13px;
+  position: absolute;
+  bottom: 1%;
+  width: 100%;
+  text-align: center;
+  color: transparent;
+  font-size: 0;
 }
+[hidden] { display: none !important; }
 </style>
+
 </head>
 <body>
+
 <main class="pantalla">
-<img src="/logo.png" class="logo" alt="Buses VientoSur">
-
-<h1>Bienvenido a bordo</h1>
-<p>Tu viaje comienza aquí.<br>
-Viaja cómodo, seguro y conectado.</p>
-
-<div class="botones" id="botones" hidden>
-<a class="boton registro" href="/registro.html">Crear mi cuenta</a>
-<a class="boton login" href="/login.html">Iniciar sesión</a>
-</div>
-
-<p class="estado" id="estado">Verificando acceso...</p>
+  <div class="botones" id="botones" hidden>
+    <a class="boton registro" href="/registro.html" aria-label="Crear mi cuenta">Crear mi cuenta</a>
+    <a class="boton login" href="/login.html" aria-label="Iniciar sesión">Iniciar sesión</a>
+  </div>
+  <p class="estado" id="estado">Verificando acceso...</p>
 </main>
+
 
 <script>
 (async function() {
