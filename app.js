@@ -9,7 +9,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { MercadoPagoConfig, Preference } = require("mercadopago");
 
 const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN
+  accessToken: (process.env.MP_ACCESS_TOKEN || '').trim()
 });
 
 const supabase = createClient(
