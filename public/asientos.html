@@ -414,6 +414,12 @@ const fecha = params.get("fecha");
 const hora = params.get("hora");
 
 
+if (params.get("tipo_pasaje") === "estudiante" &&
+    !params.get("rut_estudiante")) {
+  alert("Falta el RUT del estudiante. Vuelve a seleccionar tu pasaje.");
+  return;
+}
+
 const botonPagar = document.querySelector('button[onclick="pagar()"]');
 
 if (botonPagar && botonPagar.disabled) return;

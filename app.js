@@ -1107,8 +1107,12 @@ await supabase.from("bloqueos").insert(bloqueos);
           datos.fecha,
           datos.hora,
           datos.asiento,
-          codigoQRReal
-        , paymentId, 0);
+          codigoQRReal,
+          paymentId,
+          0,
+          Number(payment.transaction_amount),
+          datos.tipo_pasaje === "estudiante" ? "estudiante" : "adulto"
+        );
 
         if (correoAceptado === true) {
           const { error: errorConfirmacion } = await supabase
