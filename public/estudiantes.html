@@ -280,7 +280,7 @@ document.getElementById("sentido").addEventListener("change",cargarHorarios);
 campoFecha.addEventListener("change",cargarHorarios);
 
 
-document.getElementById("continuar").addEventListener("click",()=>{
+document.getElementById("continuar").addEventListener("click",async ()=>{
   if(!pase || !horarioElegido)return;
 
   const nombre=document.getElementById("nombre").value.trim();
@@ -324,7 +324,40 @@ document.getElementById("continuar").addEventListener("click",()=>{
     rut_estudiante:rutCampo.value.trim()
   });
 
-  window.location.href="/asientos.html?"+parametros.toString();
+  const botonContinuar=document.getElementById("continuar");
+  botonContinuar.disabled=true;
+
+  try {
+    const respuesta=await fetch("/api/estudiantes/verificar-compra",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        rut:rutCampo.value.trim(),
+        fecha:campoFecha.value,
+        origen:normalizar(ruta.origen),
+        destino:normalizar(ruta.destino)
+      })
+    });
+
+    const datos=await respuesta.json();
+
+    if(!respuesta.ok || !datos.ok){
+      throw new Error(datos.mensaje || "No se pudo verificar el pasaje.");
+    }
+
+    if(datos.ya_compro){
+      aviso.textContent="Ya tienes un pasaje estudiantil para esta fecha y direccion. Puedes comprar para otro dia o para el regreso.";
+      return;
+    }
+
+    aviso.textContent="";
+    window.location.href="/asientos.html?"+parametros.toString();
+
+  }catch(error){
+    aviso.textContent=error.message;
+  }finally{
+    botonContinuar.disabled=false;
+  }
 });
 </script>
 </body>

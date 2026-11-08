@@ -41,12 +41,12 @@ const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 
-async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento, codigoQR = null, pagoId = null, intentoCorreo = 0) {
+async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, asiento, codigoQR = null, pagoId = null, intentoCorreo = 0, precio = null, tipoPasaje = "adulto") {
   console.log("📧 Enviando correo a:", correo);
 
   try {
     // generar PDF
-    const archivoPDF = await generarPDF(nombre, origen, destino, fecha, hora, asiento, codigoQR);
+    const archivoPDF = await generarPDF(nombre, origen, destino, fecha, hora, asiento, codigoQR, precio, tipoPasaje);
 
     const { data: correoEnviado, error: errorResend } = await resend.emails.send({
       from: "Buses VientoSur <ventas@busesvientosur.cl>",
@@ -84,7 +84,7 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
 }
  
 
-function generarPDF(nombre, origen, destino, fecha, hora, asiento, codigoQR = null) {
+function generarPDF(nombre, origen, destino, fecha, hora, asiento, codigoQR = null, precio = null, tipoPasaje = 'adulto') {
   return new Promise(async (resolve, reject) => {
     const path = require("path");
     const QRCode = require("qrcode");
@@ -188,6 +188,31 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento, codigoQR = nu
     campo("HORA DE SALIDA", hora, 183, 202);
     campo("PASAJERO", nombre, 28, 259, 175);
     campo("ASIENTO", asiento, 232, 259, 80);
+
+    const etiquetaPasaje = tipoPasaje === "estudiante"
+      ? "PASAJE ESTUDIANTE"
+      : "PASAJE ADULTO";
+
+    doc.font("Helvetica-Bold")
+       .fontSize(12)
+       .fillColor("#dc2626")
+       .text(etiquetaPasaje, 28, 297, {
+         width: 170,
+         align: "left"
+       });
+
+    const valorPasaje = Number(precio);
+    const precioTexto = Number.isFinite(valorPasaje) && valorPasaje >= 0
+      ? "$" + valorPasaje.toLocaleString("es-CL")
+      : "No disponible";
+
+    doc.font("Helvetica-Bold")
+       .fontSize(11)
+       .fillColor("#103b70")
+       .text(precioTexto, 203, 297, {
+         width: 109,
+         align: "right"
+       });
 
     doc.moveTo(28, 319)
        .lineTo(312, 319)
@@ -670,6 +695,52 @@ app.post("/api/estudiantes/consultar", async (req, res) => {
   }
 });
 
+app.post("/api/estudiantes/verificar-compra", async (req, res) => {
+  try {
+    const { rut, fecha, origen, destino } = req.body;
+
+    if (
+      typeof rut !== "string" ||
+      !/^[0-9.kK-]{7,14}$/.test(rut) ||
+      typeof fecha !== "string" ||
+      !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(fecha) ||
+      typeof origen !== "string" ||
+      typeof destino !== "string"
+    ) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Datos de consulta invalidos."
+      });
+    }
+
+    const rutNormalizado = rut.replace(/[^0-9kK]/g, "").toUpperCase();
+
+    const { data, error } = await supabase
+      .from("ventas")
+      .select("id")
+      .eq("tipo_pasaje", "estudiante")
+      .eq("rut_estudiante", rutNormalizado)
+      .eq("fecha", fecha)
+      .eq("ruta", origen + " - " + destino)
+      .eq("estado", "pagado")
+      .limit(1);
+
+    if (error) throw error;
+
+    return res.json({
+      ok: true,
+      ya_compro: Array.isArray(data) && data.length > 0
+    });
+
+  } catch (error) {
+    console.error("ERROR VERIFICANDO COMPRA ESTUDIANTE:", error);
+    return res.status(500).json({
+      ok: false,
+      mensaje: "No se pudo verificar la compra."
+    });
+  }
+});
+
 app.post("/pagar", async (req, res) => {
   try {
     const { nombre, correo, origen, destino, fecha, hora, asiento } = req.body;
@@ -752,6 +823,32 @@ app.post("/pagar", async (req, res) => {
       return res.status(400).json({ error: "Faltan datos" });
     }
 
+    if (req.body.tipo_pasaje === "estudiante") {
+      const rut = String(req.body.rut_estudiante || "")
+        .replace(/[^0-9kK]/g, "").toUpperCase();
+
+      const { data: compras, error: errorCompras } = await supabase
+        .from("ventas")
+        .select("rut_estudiante")
+        .eq("tipo_pasaje", "estudiante")
+        .eq("fecha", fecha)
+        .eq("ruta", origen + " - " + destino)
+        .eq("estado", "pagado");
+
+      if (errorCompras) throw errorCompras;
+
+      const yaCompro = (compras || []).some(v =>
+        String(v.rut_estudiante || "")
+          .replace(/[^0-9kK]/g, "").toUpperCase() === rut
+      );
+
+      if (yaCompro) {
+        return res.status(409).json({
+          error: "Ya compraste un pasaje estudiantil para este dia y sentido."
+        });
+      }
+    }
+
     const preference = {
       items: [
         {
@@ -769,7 +866,9 @@ app.post("/pagar", async (req, res) => {
         nombre,
         correo,
         origen,
-        destino
+        destino,
+        tipo_pasaje: req.body.tipo_pasaje === "estudiante" ? "estudiante" : "adulto",
+        rut_estudiante: req.body.tipo_pasaje === "estudiante" ? req.body.rut_estudiante : null
       }),
 
       notification_url: "https://buses-vientosur.onrender.com/webhook",
@@ -854,11 +953,11 @@ app.post("/webhook", async (req, res) => {
 
       const payment = await paymentClient.get({ id: paymentId });
 
+      const datos = JSON.parse(payment.external_reference || "{}");
+
       if (payment.status !== "approved") {
         return res.sendStatus(200);
       }
-
-      const datos = JSON.parse(payment.external_reference || "{}");
 
       // Evitar reprocesar pagos ya registrados.
       const { data: ventaExistente, error: errorConsulta } = await supabase
@@ -897,7 +996,11 @@ app.post("/webhook", async (req, res) => {
           p_hora: datos.hora,
           p_ruta: datos.origen + " - " + datos.destino,
           p_nombre: datos.nombre || null,
-          p_precio: Number(payment.transaction_amount)
+          p_precio: Number(payment.transaction_amount),
+          p_tipo_pasaje: datos.tipo_pasaje === "estudiante" ? "estudiante" : "adulto",
+          p_rut_estudiante: datos.tipo_pasaje === "estudiante"
+            ? String(datos.rut_estudiante || "").replace(/[^0-9kK]/g, "").toUpperCase()
+            : null
         }
       );
 
@@ -1307,8 +1410,12 @@ async function procesarReintentosBoletos() {
           datos.fecha,
           datos.hora,
           datos.asiento,
-          venta.codigo_qr
-        , venta.pago_id, Number(venta.correo_intentos));
+          venta.codigo_qr,
+          venta.pago_id,
+          Number(venta.correo_intentos),
+          Number(pago.transaction_amount),
+          datos.tipo_pasaje === "estudiante" ? "estudiante" : "adulto"
+        );
 
         if (!enviado) throw new Error("Fallo envio Resend");
 
