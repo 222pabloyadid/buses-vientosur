@@ -254,6 +254,12 @@ await fetch("/reservar", {
   })
   .then(res => res.json())
   .then(data => {
+    if (!data.init_point || !/^https:\/\//.test(data.init_point)) {
+      console.error("Respuesta de pago:", data);
+      alert("No se pudo iniciar el pago. Intenta nuevamente.");
+      return;
+    }
+
     window.location.href = data.init_point;
   });
 }  
