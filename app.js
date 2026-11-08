@@ -1287,6 +1287,56 @@ app.post("/api/auth/registro", limitarAuth, async (req, res) => {
   }
 });
 
+
+
+app.get("/api/auth/configuracion", (req, res) => {
+  const url = process.env.SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+
+  if (!url || !anonKey) {
+    return res.status(503).json({
+      ok: false,
+      mensaje: "Recuperación no configurada."
+    });
+  }
+
+  res.set("Cache-Control", "no-store");
+  res.json({ url, anonKey });
+});
+
+app.post("/api/auth/recuperar", limitarAuth, async (req, res) => {
+  try {
+    const correo = String(req.body?.correo || "").trim().toLowerCase();
+
+    if (correo.length > 254 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Ingresa un correo válido."
+      });
+    }
+
+    const auth = clienteAuthVientoSur();
+
+    const { error } = await auth.auth.resetPasswordForEmail(correo, {
+      redirectTo: "https://busesvientosur.cl/recuperar.html"
+    });
+
+    if (error) console.error("Recuperación:", error.message);
+
+    res.json({
+      ok: true,
+      mensaje: "Si el correo está registrado, recibirás un enlace para recuperar tu contraseña."
+    });
+  } catch (error) {
+    console.error("Error recuperación:", error.message);
+    res.status(500).json({
+      ok: false,
+      mensaje: "No se pudo procesar la solicitud."
+    });
+  }
+});
+
 app.post("/api/auth/login", limitarAuth, async (req, res) => {
   try {
     const { correo, password } = req.body || {};

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recuperar cuenta - VientoSur</title>
+<style>
+body{font-family:Arial,sans-serif;background:#eef5fa;margin:0;padding:24px}
+main{max-width:420px;margin:50px auto;background:white;padding:25px;border-radius:18px}
+input,button{width:100%;padding:13px;margin:9px 0;box-sizing:border-box;border-radius:9px}
+button{background:#087f83;color:white;border:0}
+</style>
+</head>
+<body>
+<main>
+<h2>Recuperar cuenta</h2>
+<div id="solicitar">
+<p>Escribe tu correo registrado.</p>
+<input id="correo" type="email" placeholder="Correo electrónico">
+<button onclick="enviar()">Enviar enlace</button>
+</div>
+<div id="cambiar" hidden>
+<p>Escribe tu nueva contraseña.</p>
+<input id="clave" type="password" minlength="10" placeholder="Nueva contraseña">
+<button onclick="cambiar()">Guardar contraseña</button>
+</div>
+<p id="mensaje"></p>
+<a href="/login.html">Volver al inicio de sesión</a>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+let cliente = null;
+
+async function enviar() {
+  const correo = document.getElementById("correo").value.trim();
+  const respuesta = await fetch("/api/auth/recuperar", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({correo})
+  });
+  const datos = await respuesta.json();
+  document.getElementById("mensaje").textContent = datos.mensaje;
+}
+
+async function iniciar() {
+  const hash = new URLSearchParams(location.hash.substring(1));
+  if (hash.get("type") !== "recovery" || !hash.get("access_token")) return;
+
+  const configuracion = await fetch("/api/auth/configuracion");
+  if (!configuracion.ok) return;
+  const datos = await configuracion.json();
+
+  cliente = supabase.createClient(datos.url, datos.anonKey);
+  const {error} = await cliente.auth.setSession({
+    access_token:hash.get("access_token"),
+    refresh_token:hash.get("refresh_token")
+  });
+
+  if (error) {
+    document.getElementById("mensaje").textContent="Enlace inválido o vencido.";
+    return;
+  }
+
+  history.replaceState(null,"",location.pathname);
+  document.getElementById("solicitar").hidden=true;
+  document.getElementById("cambiar").hidden=false;
+}
+
+async function cambiar() {
+  const clave=document.getElementById("clave").value;
+  if (clave.length<10) {
+    document.getElementById("mensaje").textContent="Mínimo 10 caracteres.";
+    return;
+  }
+  const {error}=await cliente.auth.updateUser({password:clave});
+  document.getElementById("mensaje").textContent=error
+    ? "No se pudo cambiar la contraseña."
+    : "Contraseña actualizada. Ya puedes iniciar sesión.";
+  if (!error) await cliente.auth.signOut();
+}
+
+iniciar();
+</script>
+</body>
+</html>
