@@ -203,10 +203,25 @@ async function cargarHorarios(){
   const ruta=rutaActual();
 
   try{
+    const normalizarParada = valor => {
+      const nombres = {
+        "Barros Arana": "BarrosArana",
+        "Teodoro Schmidt": "TeodoroSchmidt",
+        "Parada 31": "Parada31",
+        "Parada 21": "Parada21",
+        "Las Dichas": "LasDichas",
+        "Límite": "Limite",
+        "Lolén": "Lolen",
+        "Hualpín": "Hualpin",
+        "Toltén": "Tolten"
+      };
+      return nombres[valor] || valor;
+    };
+
     const parametros=new URLSearchParams({
       dia:tipoDia,
-      origen:ruta.origen,
-      destino:ruta.destino,
+      origen:normalizarParada(ruta.origen),
+      destino:normalizarParada(ruta.destino),
       fecha:fecha
     });
 
