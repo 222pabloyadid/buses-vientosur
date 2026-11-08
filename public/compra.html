@@ -5,6 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Buses VientoSur | Pasajes</title>
 <link rel="stylesheet" href="/styles.css">
+
+<style>
+.fecha-contenedor {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+.fecha-contenedor input {
+  flex: 1;
+  min-width: 0;
+}
+#abrir-calendario {
+  flex: 0 0 58px;
+  border: 1px solid #cbd9ea;
+  border-radius: 12px;
+  background: #eaf3ff;
+  font-size: 25px;
+  cursor: pointer;
+}
+.horarios-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 10px;
+  margin: 15px 0;
+}
+.horario-opcion {
+  padding: 14px 5px;
+  border: 2px solid #c7d8eb;
+  border-radius: 12px;
+  background: white;
+  color: #12365d;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.horario-opcion.activo {
+  background: #0758b5;
+  border-color: #003d83;
+  color: white;
+}
+</style>
 </head>
 <body>
 
@@ -53,10 +95,10 @@
 </div>
 
 <label for="fecha">Fecha de viaje</label>
-<div style="display:flex;align-items:center;gap:10px">
-<input id="fecha" name="fecha" type="date"
-       style="flex:1;min-width:0">
-<span style="font-size:24px" aria-hidden="true">📅</span>
+<div class="fecha-contenedor">
+  <input id="fecha" name="fecha" type="date">
+  <button type="button" id="abrir-calendario"
+    aria-label="Abrir calendario">📅</button>
 </div>
 <p style="font-size:13px;color:#526781;margin:5px 0 12px">
 La fecha de hoy aparece automáticamente. Puedes cambiarla.
@@ -197,26 +239,27 @@ async function buscar() {
       return;
     }
 
-    const selector = document.createElement("select");
-    selector.id = "horarioSelect";
-
-    const inicial = document.createElement("option");
-    inicial.value = "";
-    inicial.textContent = "-- Seleccionar horario --";
-    selector.appendChild(inicial);
+    const grid = document.createElement("div");
+    grid.className = "horarios-grid";
 
     horariosDisponibles.forEach(hora => {
-      const opcion = document.createElement("option");
-      opcion.value = hora;
-      opcion.textContent = hora;
-      selector.appendChild(opcion);
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.className = "horario-opcion";
+      boton.textContent = hora;
+
+      boton.addEventListener("click", () => {
+        grid.querySelectorAll(".horario-opcion")
+          .forEach(b => b.classList.remove("activo"));
+
+        boton.classList.add("activo");
+        window.horarioSeleccionado = hora;
+      });
+
+      grid.appendChild(boton);
     });
 
-    selector.addEventListener("change", () => {
-      window.horarioSeleccionado = selector.value;
-    });
-
-    contenedor.appendChild(selector);
+    contenedor.appendChild(grid);
 
     const precio = document.createElement("p");
     precio.textContent = "Precio: $" + dataPrecio.precio;
@@ -241,6 +284,22 @@ campoFecha.min = fechaActualChile();
 document.getElementById("origen").addEventListener("change", buscar);
 document.getElementById("destino").addEventListener("change", buscar);
 campoFecha.addEventListener("change", buscar);
+
+document.getElementById("abrir-calendario")
+  .addEventListener("click", () => {
+    if (typeof campoFecha.showPicker === "function") {
+      try {
+        campoFecha.showPicker();
+      } catch (error) {
+        campoFecha.focus();
+        campoFecha.click();
+      }
+    } else {
+      campoFecha.focus();
+      campoFecha.click();
+    }
+  });
+
 
 buscar();
 
