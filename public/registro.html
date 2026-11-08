@@ -93,6 +93,9 @@ button:disabled { opacity: .6; }
 <input id="telefono" name="telefono" type="tel" autocomplete="tel" required>
 <label for="correo">Correo electrónico</label>
 <input id="correo" name="correo" type="email" autocomplete="email" required>
+<label for="confirmar-correo">Confirmar correo electrónico</label>
+<input id="confirmar-correo" type="email" autocomplete="off" required>
+
 <label for="password">Contraseña (mínimo 10 caracteres)</label>
 <div class="campo-password" style="position:relative">
 <input id="password" name="password" type="password" autocomplete="new-password" minlength="10" required style="padding-right:55px;box-sizing:border-box;width:100%">
@@ -116,6 +119,15 @@ document.getElementById("formulario").addEventListener("submit", async e => {
   try {
     const formulario = new FormData(e.target);
     const datos = Object.fromEntries(formulario.entries());
+
+    const correo = document.getElementById("correo").value.trim();
+    const confirmacion = document.getElementById("confirmar-correo").value.trim();
+
+    if (correo.toLowerCase() !== confirmacion.toLowerCase()) {
+      mensaje.textContent = "Los correos electrónicos no coinciden.";
+      mensaje.style.color = "#b42318";
+      return;
+    }
 
     const respuesta = await fetch("/api/auth/registro", {
       method: "POST",

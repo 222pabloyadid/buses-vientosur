@@ -182,6 +182,12 @@
 
 <label for="correo">Correo electrónico</label>
 <input id="correo" type="email" placeholder="tu@email.com" autocomplete="email">
+<div id="bloque-confirmar-correo">
+<label for="confirmar-correo">Confirmar correo electrónico</label>
+<input id="confirmar-correo" type="email"
+placeholder="Repite tu correo" autocomplete="off">
+</div>
+
 
 <div class="rutas">
 <div>
@@ -414,6 +420,7 @@ campoFecha.addEventListener("change", buscar);
 buscar();
 
 function irAAsientos() {
+    if (!validarConfirmacionCorreo()) return;
     const fecha = document.getElementById("fecha").value;
     const nombre = document.getElementById("nombre").value;
     const correo = document.getElementById("correo").value;
@@ -573,6 +580,50 @@ document.getElementById("mes-siguiente")
     if (correo) correo.value = datos.usuario.correo || "";
   } catch (error) {
     console.error("No se pudieron cargar los datos del usuario");
+  }
+})();
+</script>
+
+
+<script>
+let correoCuentaVerificado = false;
+
+function validarConfirmacionCorreo() {
+  const correo = document.getElementById("correo").value.trim();
+  const confirmacion = document.getElementById("confirmar-correo").value.trim();
+
+  if (correoCuentaVerificado) return true;
+
+  if (!confirmacion || correo.toLowerCase() !== confirmacion.toLowerCase()) {
+    alert("Los correos electrónicos no coinciden.");
+    return false;
+  }
+
+  return true;
+}
+
+(async function configurarCorreoCuenta() {
+  const token = localStorage.getItem("vientosur_token");
+  if (!token) return;
+
+  try {
+    const respuesta = await fetch("/api/auth/yo", {
+      headers: { Authorization: "Bearer " + token }
+    });
+
+    if (!respuesta.ok) return;
+
+    const datos = await respuesta.json();
+    if (!datos.ok || !datos.usuario) return;
+
+    const campo = document.getElementById("correo");
+    campo.value = datos.usuario.correo || "";
+    campo.readOnly = true;
+
+    correoCuentaVerificado = true;
+    document.getElementById("bloque-confirmar-correo").hidden = true;
+  } catch (error) {
+    console.error("No se pudo consultar la cuenta");
   }
 })();
 </script>
