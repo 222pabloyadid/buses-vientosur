@@ -90,7 +90,10 @@ button:disabled { opacity: .6; }
 <label for="correo">Correo electrónico</label>
 <input id="correo" name="correo" type="email" autocomplete="email" required>
 <label for="password">Contraseña</label>
-<input id="password" name="password" type="password" autocomplete="current-password" required>
+<div style="position:relative">
+<input id="password" name="password" type="password" autocomplete="current-password" required style="width:100%;box-sizing:border-box;padding-right:55px">
+<button type="button" id="ver-password" aria-label="Mostrar contraseña" aria-pressed="false" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:0;cursor:pointer;padding:8px;font-size:22px;line-height:1">👁️</button>
+</div>
 
 <button type="submit" id="boton">Ingresar</button>
 </form>
@@ -137,6 +140,17 @@ document.getElementById("formulario").addEventListener("submit", async e => {
   } finally {
     boton.disabled = false;
   }
+});
+</script>
+
+<script>
+document.getElementById("ver-password").addEventListener("click", function() {
+  const campo = document.getElementById("password");
+  const visible = campo.type === "password";
+  campo.type = visible ? "text" : "password";
+  this.textContent = visible ? "🙈" : "👁️";
+  this.setAttribute("aria-label", visible ? "Ocultar contraseña" : "Mostrar contraseña");
+  this.setAttribute("aria-pressed", String(visible));
 });
 </script>
 </body>
