@@ -70,6 +70,7 @@ module.exports = function (supabase) {
         .from("estudiantes_vientosur")
         .upsert({
           rut,nombre,origen,destino,vencimiento,
+          precio_estudiante,
           estado:"activo",
           actualizado_at:new Date().toISOString()
         },{onConflict:"rut"});
