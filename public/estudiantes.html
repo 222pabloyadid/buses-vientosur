@@ -298,9 +298,23 @@ document.getElementById("continuar").addEventListener("click",()=>{
 
   const ruta=rutaActual();
 
+  const nombresParadas = {
+    "Barros Arana": "BarrosArana",
+    "Teodoro Schmidt": "TeodoroSchmidt",
+    "Parada 31": "Parada31",
+    "Parada 21": "Parada21",
+    "Las Dichas": "LasDichas",
+    "Límite": "Limite",
+    "Lolén": "Lolen",
+    "Hualpín": "Hualpin",
+    "Toltén": "Tolten"
+  };
+
+  const normalizar = valor => nombresParadas[valor] || valor;
+
   const parametros=new URLSearchParams({
-    origen:ruta.origen,
-    destino:ruta.destino,
+    origen:normalizar(ruta.origen),
+    destino:normalizar(ruta.destino),
     fecha:campoFecha.value,
     hora:horarioElegido,
     nombre:nombre,
