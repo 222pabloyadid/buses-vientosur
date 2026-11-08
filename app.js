@@ -687,7 +687,7 @@ app.post("/pagar", async (req, res) => {
     }
 
     if (typeof fecha !== "string" ||
-        !/^\\d{4}-\\d{2}-\\d{2}$/.test(fecha) ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(fecha) ||
         typeof hora !== "string" ||
         !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(hora)) {
       return res.status(400).json({
