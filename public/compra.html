@@ -53,10 +53,17 @@
 </div>
 
 <label for="fecha">Fecha de viaje</label>
-<input id="fecha" name="fecha" type="date">
+<div style="display:flex;align-items:center;gap:10px">
+<input id="fecha" name="fecha" type="date"
+       style="flex:1;min-width:0">
+<span style="font-size:24px" aria-hidden="true">📅</span>
+</div>
+<p style="font-size:13px;color:#526781;margin:5px 0 12px">
+La fecha de hoy aparece automáticamente. Puedes cambiarla.
+</p>
 
 <button class="buscar" onclick="buscar()">
-Buscar horarios
+Actualizar horarios
 </button>
 
 <div id="resultado" class="resultado" aria-live="polite"></div>
@@ -99,64 +106,144 @@ function actualizarDestinos() {
     destinoSelect.innerHTML += "<option>Pitrufquen</option>";
   }
 }
+let consultaHorarios = 0;
+
+function fechaActualChile() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Santiago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+}
+
 async function buscar() {
+  const consulta = ++consultaHorarios;
+  window.horarioSeleccionado = "";
+  window.precioSeleccionado = null;
+
+  const contenedor = document.getElementById("resultado");
   const origen = document.getElementById("origen").value;
   const destino = document.getElementById("destino").value;
   const fecha = document.getElementById("fecha").value;
-  
-  const hoy = new Date().toLocaleDateString("sv-SE");
+  const hoy = fechaActualChile();
 
-  if (fecha < hoy) {
-      alert("No puedes comprar pasajes para fechas pasadas");
-      return;
-  }
-
-  if (!fecha) {
-    alert("Selecciona una fecha");
+  if (!fecha || fecha < hoy) {
+    contenedor.textContent =
+      "Selecciona una fecha válida desde hoy.";
     return;
   }
 
   let dia = "semana";
-
-  const [year, month, day] = fecha.split("-");
+  const [year, month, day] = fecha.split("-").map(Number);
   const fechaObj = new Date(year, month - 1, day);
-  const diaSemana = fechaObj.getDay(); // 0=domingo, 6=sábado
+  const diaSemana = fechaObj.getDay();
 
   if (diaSemana === 6) dia = "sabado";
   if (diaSemana === 0) dia = "domingo";
 
-  const res = await fetch('/horarios?dia=' + dia + '&origen=' + origen + '&destino=' + destino + '&fecha=' + fecha);
-  const data = await res.json();
-  // Obtener precio
-  const resPrecio = await fetch('/tarifa?origen=' + origen + '&destino=' + destino);
-  const dataPrecio = await resPrecio.json();
-  window.precioSeleccionado = dataPrecio.precio;
+  contenedor.textContent = "Consultando horarios disponibles...";
 
-  const contenedor = document.getElementById("resultado");
+  try {
+    const parametros = new URLSearchParams({
+      dia, origen, destino, fecha
+    });
 
-let html = "";
-html += "<h3>Selecciona un horario:</h3>";
-html += "<select id='horarioSelect'>";
-html += "<option value=''>-- Seleccionar --</option>";
+    const [res, resPrecio] = await Promise.all([
+      fetch("/horarios?" + parametros),
+      fetch("/tarifa?" + new URLSearchParams({origen,destino}))
+    ]);
 
-data.horarios.forEach(hora => {
-  html += "<option value='" + hora + "'>" + hora + "</option>";
-});
+    if (!res.ok || !resPrecio.ok) {
+      throw new Error("No se pudieron consultar los horarios.");
+    }
 
-html += "</select>";
-html += "<p>Precio: $" + dataPrecio.precio + "</p>";
+    const data = await res.json();
+    const dataPrecio = await resPrecio.json();
 
-contenedor.innerHTML = html;
+    if (consulta !== consultaHorarios) return;
 
-document.getElementById("horarioSelect").addEventListener("change", (e) => {
-  window.horarioSeleccionado = e.target.value;
-});
+    const horarios = Array.isArray(data.horarios)
+      ? data.horarios
+      : [];
 
-  
+    const horariosDisponibles = horarios.filter(hora => {
+      if (fecha !== fechaActualChile()) return true;
+
+      const partes = String(hora).match(/^(\d{1,2}):(\d{2})$/);
+      if (!partes) return false;
+
+      const ahoraChile = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "America/Santiago",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      }).format(new Date());
+
+      return String(hora).padStart(5,"0") > ahoraChile;
+    });
+
+    contenedor.innerHTML = "";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Selecciona un horario:";
+    contenedor.appendChild(titulo);
+
+    if (!horariosDisponibles.length) {
+      const aviso = document.createElement("p");
+      aviso.textContent =
+        "No hay horarios disponibles para esta fecha y ruta.";
+      contenedor.appendChild(aviso);
+      return;
+    }
+
+    const selector = document.createElement("select");
+    selector.id = "horarioSelect";
+
+    const inicial = document.createElement("option");
+    inicial.value = "";
+    inicial.textContent = "-- Seleccionar horario --";
+    selector.appendChild(inicial);
+
+    horariosDisponibles.forEach(hora => {
+      const opcion = document.createElement("option");
+      opcion.value = hora;
+      opcion.textContent = hora;
+      selector.appendChild(opcion);
+    });
+
+    selector.addEventListener("change", () => {
+      window.horarioSeleccionado = selector.value;
+    });
+
+    contenedor.appendChild(selector);
+
+    const precio = document.createElement("p");
+    precio.textContent = "Precio: $" + dataPrecio.precio;
+    contenedor.appendChild(precio);
+
+    window.precioSeleccionado = dataPrecio.precio;
+
+  } catch (error) {
+    if (consulta !== consultaHorarios) return;
+    console.error("Error consultando horarios:", error);
+    contenedor.textContent =
+      "No se pudieron cargar los horarios. Intenta nuevamente.";
+  }
 }
 
-
 actualizarDestinos();
+
+const campoFecha = document.getElementById("fecha");
+campoFecha.value = fechaActualChile();
+campoFecha.min = fechaActualChile();
+
+document.getElementById("origen").addEventListener("change", buscar);
+document.getElementById("destino").addEventListener("change", buscar);
+campoFecha.addEventListener("change", buscar);
+
+buscar();
+
 function irAAsientos() {
     const fecha = document.getElementById("fecha").value;
     const nombre = document.getElementById("nombre").value;
