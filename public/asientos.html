@@ -97,7 +97,8 @@ h2 {
 .ocupado-color { background: #d64242; }
 
 .bus-marco {
-  max-width: 440px;
+  width: 100%;
+  max-width: 540px;
   margin: auto;
   padding: 16px 10px 25px;
   border: 4px solid #a9bfd6;
@@ -119,14 +120,14 @@ h2 {
 .bus {
   display: grid;
   grid-template-columns: repeat(5,minmax(0,1fr));
-  gap: 17px 5px;
+  gap: 17px 8px;
   width: 100%;
 }
 
 .asiento {
   position: relative;
   width: 100%;
-  max-width: 65px;
+  max-width: 76px;
   aspect-ratio: .83;
   justify-self: center;
   border: 2px solid #243e59;
@@ -209,7 +210,7 @@ h2 {
   .marca { margin: -17px -17px 20px; }
   h2 { font-size: 23px; }
   .etiqueta { font-size: 12px; padding: 9px; }
-  .bus { column-gap: 4px; }
+  .bus { column-gap: 6px; }
   .asiento { font-size: 14px; }
   .bus-marco { padding: 14px 8px 20px; }
 }
