@@ -33,6 +33,16 @@ body {
   background: #07376b;
 }
 
+.pantalla::before {
+  content: "";
+  position: absolute;
+  inset: -25px;
+  background: url("/portada-vientosur.png") center / cover no-repeat;
+  filter: blur(22px) brightness(.65);
+  transform: scale(1.08);
+  pointer-events: none;
+}
+
 .portada {
   position: absolute;
   width: 100%;
