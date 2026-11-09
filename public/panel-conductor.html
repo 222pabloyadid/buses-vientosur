@@ -327,7 +327,10 @@ async function cargarHorarios() {
     Object.keys(horariosDisponibles).forEach(clave => {
       const opcion = document.createElement("option");
       opcion.value = clave;
-      opcion.textContent = clave.replaceAll("_", " - ");
+      opcion.textContent =
+        clave === "Temuco_Tolten" ? "Temuco - Toltén" :
+        clave === "Tolten_Temuco" ? "Toltén - Temuco" :
+        clave.replaceAll("_", " - ");
       ruta.appendChild(opcion);
     });
 

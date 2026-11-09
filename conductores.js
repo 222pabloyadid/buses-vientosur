@@ -184,7 +184,18 @@ function crearRutasConductores(supabase) {
           const hora = typeof item === "string"
             ? item : item.hora;
 
-          return !bloqueados.has(hora) &&
+          const horaActual = new Intl.DateTimeFormat(
+            "en-GB",
+            {
+              timeZone: "America/Santiago",
+              hour: "2-digit",
+              minute: "2-digit",
+              hourCycle: "h23"
+            }
+          ).format(new Date());
+
+          return hora >= horaActual &&
+            !bloqueados.has(hora) &&
             !cerradas.has(sentido + "|" + hora);
         });
 
@@ -266,6 +277,23 @@ function crearRutasConductores(supabase) {
         return res.status(400).json({
           ok: false,
           mensaje: "Horario deshabilitado"
+        });
+      }
+
+      const { data: bloqueosAdmin, error: errorAdmin } =
+        await supabase
+          .from("bloqueos_salidas")
+          .select("hora")
+          .eq("sentido", ruta)
+          .eq("tipo_dia", tipo)
+          .eq("hora", hora);
+
+      if (errorAdmin) throw errorAdmin;
+
+      if (bloqueosAdmin?.length) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Salida desactivada por el administrador"
         });
       }
 
