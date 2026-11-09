@@ -4,20 +4,183 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VientoSur | Panel conductor</title>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#edf3f8;font-family:Arial,sans-serif;color:#173451}
-main{max-width:450px;margin:auto;padding:18px}
-header{background:#123c60;color:white;padding:22px;text-align:center;border-radius:15px}
-section{background:white;padding:20px;margin-top:15px;border-radius:15px}
-select,button{width:100%;padding:14px;margin-top:12px;border-radius:10px;font-size:16px}
-select{border:1px solid #ccd5df;background:white}
-button{border:0;background:#123c60;color:white;font-weight:bold}
-button:disabled{opacity:.5}
-.total{font-size:35px;font-weight:bold;text-align:center}
-small{color:#64748b}
-#mensaje{margin-top:12px}
+
+body{
+  margin:0;
+  background:#f2f4f7;
+  font-family:Arial,sans-serif;
+  color:#17212b;
+}
+
+main{
+  max-width:450px;
+  margin:auto;
+  padding:10px;
+}
+
+header{
+  background:#111827;
+  color:white;
+  padding:15px;
+  border-radius:16px;
+  text-align:left;
+}
+
+header h2{
+  margin:0;
+  font-size:21px;
+  letter-spacing:1px;
+}
+
+header p{
+  margin:5px 0 0;
+  font-size:13px;
+  color:#cbd5e1;
+}
+
+section{
+  background:white;
+  padding:13px;
+  margin-top:9px;
+  border-radius:15px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+
+section h3{
+  font-size:15px;
+  margin:0 0 10px;
+}
+
+section p{
+  font-size:13px;
+  margin:7px 0;
+}
+
+label{
+  display:block;
+  font-size:12px;
+  font-weight:bold;
+  margin-top:8px;
+}
+
+select,button{
+  width:100%;
+  padding:11px;
+  margin-top:7px;
+  border-radius:10px;
+  font-size:14px;
+}
+
+select{
+  border:1px solid #d5dce5;
+  background:#f8fafc;
+}
+
+button{
+  border:0;
+  background:#111827;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+#iniciar{
+  background:#16a34a;
+}
+
+#finalizar{
+  background:#dc2626;
+}
+
+#gps{
+  background:#2563eb;
+}
+
+#escanear{
+  background:#111827;
+}
+
+#estadoGPS{
+  font-size:12px;
+  color:#475569;
+}
+
+.total{
+  font-size:28px;
+  font-weight:bold;
+  text-align:left;
+}
+
+small{
+  font-size:11px;
+  color:#64748b;
+}
+
+#mensaje{
+  font-size:12px;
+  margin-top:7px;
+}
+
+.acciones-rapidas{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+
+.acciones-rapidas section{
+  margin-top:0;
+  min-width:0;
+}
+
+.acciones-rapidas button{
+  min-height:49px;
+  font-size:13px;
+}
+
+details{
+  background:white;
+  border-radius:15px;
+  margin-top:9px;
+  padding:13px;
+}
+
+summary{
+  font-weight:bold;
+  font-size:14px;
+  cursor:pointer;
+  padding:5px 0;
+}
+
+details section{
+  box-shadow:none;
+  padding:8px 0;
+}
+
+#listaPasajesVendidos{
+  max-height:230px;
+  overflow-y:auto;
+}
+
+#resumenPasajes{
+  font-size:12px;
+}
+
+@media(max-width:360px){
+  main{padding:7px}
+  section{padding:10px}
+  .acciones-rapidas{gap:6px}
+  button{font-size:12px}
+}
 </style>
+
 </head>
 <body>
 <main>
@@ -26,69 +189,104 @@ small{color:#64748b}
 <p id="nombre">Panel del conductor</p>
 </header>
 
+
 <section>
 <h3>Mi recorrido</h3>
-<label for="ruta">Ruta</label>
+
+<label for="ruta">Ruta habilitada</label>
 <select id="ruta">
 <option value="">Seleccionar ruta</option>
 </select>
-<label for="hora">Horario habilitado</label>
+
+<label for="hora">Horario</label>
 <select id="hora">
 <option value="">Seleccionar horario</option>
 </select>
-<button id="iniciar" disabled>INICIAR RECORRIDO</button>
-<p id="mensaje" role="status"></p>
-<button id="finalizar" disabled>FINALIZAR RECORRIDO</button>
-</section>
 
-<section>
-<h3>🎟️ MIS PASAJES VENDIDOS</h3>
-<p id="resumenPasajes">Esperando recorrido...</p>
-<div id="listaPasajesVendidos"></div>
-<small>Actualización automática cada 15 segundos.</small>
-</section>
-
-<section>
-<h3>Validación de boletos</h3>
-<button id="escanear" disabled>ESCANEAR QR</button>
-<small>Disponible al iniciar el recorrido.</small>
-</section>
-
-<section>
-<h3>🚨 Incidencias del recorrido</h3>
-<p>Utiliza esta opción si el bus presenta una falla, accidente u otro inconveniente.</p>
-
-<label for="motivoIncidencia">Motivo</label>
-<select id="motivoIncidencia">
-<option value="falla_mecanica">Falla mecánica / Bus en pana</option>
-<option value="accidente">Accidente</option>
-<option value="otra">Otra incidencia</option>
-</select>
-
-<button id="reportarIncidencia" type="button" disabled
-style="background:#b91c1c;color:white">
-🚨 REPORTAR INCIDENCIA
+<button id="iniciar" disabled>
+INICIAR RECORRIDO
 </button>
 
-<p id="estadoIncidencia" role="status"></p>
+<p id="mensaje" role="status"></p>
+
+<button id="finalizar" disabled>
+FINALIZAR RECORRIDO
+</button>
+</section>
+
+<div class="acciones-rapidas">
+
+<section>
+<h3>GPS</h3>
+<button id="gps" disabled>
+ACTIVAR GPS
+</button>
+<p id="estadoGPS">GPS desactivado</p>
 </section>
 
 <section>
-<h3>GPS del recorrido</h3>
-<button id="gps" disabled>ACTIVAR GPS</button>
-<p id="estadoGPS">GPS desactivado</p>
+<h3>Escáner QR</h3>
+<button id="escanear" disabled>
+ESCANEAR QR
+</button>
+<small>Validar boletos</small>
 </section>
+
+</div>
 
 <section>
 <h3>Producción de hoy</h3>
 <div class="total" id="total">$0</div>
 <p id="cantidad">0 boletos validados</p>
-<button id="descargar" disabled>DESCARGAR PRODUCCIÓN</button>
 </section>
 
+<details>
+<summary>Mis pasajes vendidos</summary>
 <section>
-<button id="salir">CERRAR SESIÓN</button>
+<p id="resumenPasajes">
+Esperando recorrido...
+</p>
+<div id="listaPasajesVendidos"></div>
+<small>Actualización cada 15 segundos.</small>
 </section>
+</details>
+
+<details>
+<summary>Incidencias del recorrido</summary>
+<section>
+<p>Reportar fallas, accidentes u otros problemas.</p>
+
+<label for="motivoIncidencia">Motivo</label>
+<select id="motivoIncidencia">
+<option value="falla_mecanica">
+Falla mecánica / Bus en pana
+</option>
+<option value="accidente">Accidente</option>
+<option value="otra">Otra incidencia</option>
+</select>
+
+<button id="reportarIncidencia"
+type="button"
+disabled
+style="background:#b91c1c">
+REPORTAR INCIDENCIA
+</button>
+
+<p id="estadoIncidencia" role="status"></p>
+</section>
+</details>
+
+<details>
+<summary>Más opciones</summary>
+<section>
+<button id="descargar" disabled>
+DESCARGAR PRODUCCIÓN
+</button>
+<button id="salir">
+CERRAR SESIÓN
+</button>
+</section>
+</details>
 </main>
 
 <script>
@@ -547,6 +745,7 @@ function detenerGPSConductor() {
 
   const boton = document.getElementById("gps");
   boton.textContent = "ACTIVAR GPS";
+  document.getElementById("estadoGPS").textContent = "GPS desactivado";
 }
 
 function iniciarGPSConductor() {
@@ -564,10 +763,11 @@ function iniciarGPSConductor() {
 
   const boton = document.getElementById("gps");
   boton.textContent = "ACTIVANDO GPS...";
+  document.getElementById("estadoGPS").textContent = "Buscando ubicación...";
 
   vigilanciaGPSConductor = navigator.geolocation.watchPosition(
     async posicion => {
-      boton.textContent = "GPS ACTIVO";
+      boton.textContent = "ENVIANDO GPS...";
 
       if (enviandoGPSConductor || !recorridoActivo) return;
 
@@ -591,10 +791,24 @@ function iniciarGPSConductor() {
         });
 
         if (!respuesta.ok) {
-          console.error("No se pudo guardar la ubicación.");
+          throw new Error("El servidor rechazó la ubicación");
         }
+
+        const datos = await respuesta.json();
+
+        if (!datos.ok) {
+          throw new Error("No se confirmó la ubicación");
+        }
+
+        boton.textContent = "GPS CONECTADO";
+        document.getElementById("estadoGPS").textContent =
+          "Ubicación enviada correctamente: " +
+          new Date().toLocaleTimeString("es-CL");
       } catch (error) {
         console.error("Error enviando GPS:", error);
+        boton.textContent = "GPS SIN CONEXIÓN";
+        document.getElementById("estadoGPS").textContent =
+          "No se pudo enviar la ubicación al servidor.";
       } finally {
         enviandoGPSConductor = false;
       }

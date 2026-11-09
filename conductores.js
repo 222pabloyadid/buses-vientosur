@@ -155,19 +155,40 @@ function crearRutasConductores(supabase) {
           ? "domingo"
           : "semana";
 
+
+      // Mostrar solo recorridos principales habilitados.
+      const { data: bloqueosNuevos, error: errorNuevos } =
+        await supabase
+          .from("bloqueos_salidas")
+          .select("sentido,hora")
+          .eq("tipo_dia", tipo);
+
+      if (errorNuevos) throw errorNuevos;
+
+      const cerradas = new Set(
+        (bloqueosNuevos || []).map(
+          x => x.sentido + "|" + x.hora
+        )
+      );
+
       const disponibles = {};
 
-      for (const [ruta, horas] of Object.entries(
-        horarios[tipo] || {}
-      )) {
-        const activas = horas.filter(
-          h => !bloqueados.has(
-            typeof h === "string" ? h : h.hora
-          )
-        );
+      for (const sentido of [
+        "Tolten_Temuco",
+        "Temuco_Tolten"
+      ]) {
+        const horas = horarios[tipo]?.[sentido] || [];
+
+        const activas = horas.filter(item => {
+          const hora = typeof item === "string"
+            ? item : item.hora;
+
+          return !bloqueados.has(hora) &&
+            !cerradas.has(sentido + "|" + hora);
+        });
 
         if (activas.length) {
-          disponibles[ruta] = activas;
+          disponibles[sentido] = activas;
         }
       }
 
