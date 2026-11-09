@@ -263,21 +263,6 @@ function crearRutasConductores(supabase) {
         });
       }
 
-      const { data: bloqueos, error: errorBloqueos } =
-        await supabase
-          .from("horarios_bloqueados")
-          .select("hora")
-          .eq("hora", hora);
-
-      if (errorBloqueos) throw errorBloqueos;
-
-      if (bloqueos?.length) {
-        return res.status(400).json({
-          ok: false,
-          mensaje: "Horario deshabilitado"
-        });
-      }
-
       const { data: bloqueosAdmin, error: errorAdmin } =
         await supabase
           .from("bloqueos_salidas")
