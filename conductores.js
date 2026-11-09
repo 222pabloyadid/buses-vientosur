@@ -194,8 +194,7 @@ function crearRutasConductores(supabase) {
             }
           ).format(new Date());
 
-          return !bloqueados.has(hora) &&
-            !cerradas.has(sentido + "|" + hora);
+          return !cerradas.has(sentido + "|" + hora);
         });
 
         if (activas.length) {
