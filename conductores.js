@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const gpsPrueba = require("./gps-prueba");
 
 function crearRutasConductores(supabase) {
   const router = express.Router();
@@ -766,6 +767,89 @@ function crearRutasConductores(supabase) {
 
 
   // Actualizar GPS del recorrido activo
+
+  // GPS TEMPORAL DE PRUEBA
+  router.post("/gps-prueba", async (req, res) => {
+    try {
+      const authorization = req.headers.authorization || "";
+      const token = authorization.startsWith("Bearer ")
+        ? authorization.slice(7).trim()
+        : "";
+
+      const sesion = sesiones.get(token);
+
+      if (!sesion || sesion.expira < Date.now()) {
+        return res.status(401).json({
+          ok: false,
+          mensaje: "Sesion vencida"
+        });
+      }
+
+      const latitud = Number(req.body?.latitud);
+      const longitud = Number(req.body?.longitud);
+
+      if (
+        req.body?.latitud == null ||
+        req.body?.longitud == null ||
+        !Number.isFinite(latitud) ||
+        !Number.isFinite(longitud) ||
+        latitud < -90 || latitud > 90 ||
+        longitud < -180 || longitud > 180
+      ) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Ubicacion invalida"
+        });
+      }
+
+      const { data: conductor, error } = await supabase
+        .from("conductores")
+        .select("activo")
+        .eq("id", sesion.conductor_id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!conductor?.activo) {
+        return res.status(403).json({
+          ok: false,
+          mensaje: "Conductor no habilitado"
+        });
+      }
+
+      gpsPrueba.guardar(
+        sesion.conductor_id,
+        latitud,
+        longitud
+      );
+
+      return res.json({ ok: true });
+
+    } catch (error) {
+      console.error("ERROR GPS PRUEBA:", error);
+      return res.status(500).json({
+        ok: false,
+        mensaje: "Error GPS de prueba"
+      });
+    }
+  });
+
+  router.post("/gps-prueba/detener", (req, res) => {
+    const authorization = req.headers.authorization || "";
+    const token = authorization.startsWith("Bearer ")
+      ? authorization.slice(7).trim()
+      : "";
+
+    const sesion = sesiones.get(token);
+
+    if (!sesion || sesion.expira < Date.now()) {
+      return res.status(401).json({ ok: false });
+    }
+
+    gpsPrueba.detener(sesion.conductor_id);
+    return res.json({ ok: true });
+  });
+
   router.post("/ubicacion", async (req, res) => {
     try {
       const authorization = req.headers.authorization || "";

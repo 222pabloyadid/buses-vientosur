@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const protegerAdmin = require("./seguridad-admin");
+const gpsPrueba = require("./gps-prueba");
 
 module.exports = function crearAdminConductores(supabase) {
   const router = express.Router();
@@ -135,6 +136,28 @@ module.exports = function crearAdminConductores(supabase) {
       });
 
       res.set("Cache-Control", "no-store");
+
+      for (const prueba of gpsPrueba.listar()) {
+        const conductor = nombres.get(prueba.conductor_id);
+        if (!conductor?.activo) continue;
+
+        ubicaciones.push({
+          recorrido_id: "prueba-" + prueba.conductor_id,
+          nombre: conductor.nombre || "Conductor",
+          usuario: conductor.usuario || "",
+          activo: true,
+          origen: "GPS DE PRUEBA",
+          destino: "Sin recorrido",
+          fecha: "",
+          hora: "PRUEBA",
+          latitud: prueba.latitud,
+          longitud: prueba.longitud,
+          gps_actualizado_at: prueba.gps_actualizado_at,
+          gps_reciente: true,
+          es_prueba: true
+        });
+      }
+
       res.json({ ok: true, ubicaciones });
 
     } catch (error) {

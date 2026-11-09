@@ -222,6 +222,12 @@ FINALIZAR RECORRIDO
 ACTIVAR GPS
 </button>
 <p id="estadoGPS">GPS desactivado</p>
+<button id="gpsPrueba" type="button"
+style="background:#eab308;color:#111827">
+PROBAR GPS
+</button>
+<p id="estadoGPSPrueba">Prueba desactivada</p>
+
 </section>
 
 <section>
@@ -992,6 +998,136 @@ async function enviarIncidenciaConductor() {
 
 document.getElementById("reportarIncidencia")
   .addEventListener("click", enviarIncidenciaConductor);
+</script>
+
+
+<script>
+(() => {
+  let vigilancia = null;
+  let enviando = false;
+  let generacion = 0;
+
+  const boton = document.getElementById("gpsPrueba");
+  const estado = document.getElementById("estadoGPSPrueba");
+
+  async function detener() {
+    generacion++;
+
+    if (vigilancia !== null) {
+      navigator.geolocation.clearWatch(vigilancia);
+      vigilancia = null;
+    }
+
+    boton.textContent = "PROBAR GPS";
+    estado.textContent = "Prueba detenida";
+
+    const token = sessionStorage.getItem(
+      "vientosur_conductor_token"
+    );
+
+    try {
+      const respuesta = await fetch(
+        "/api/conductor/gps-prueba/detener",
+        {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + token
+          }
+        }
+      );
+
+      if (!respuesta.ok) {
+        throw new Error("No se pudo detener en el servidor");
+      }
+    } catch (error) {
+      estado.textContent = error.message;
+    }
+  }
+
+  boton.addEventListener("click", () => {
+    if (vigilancia !== null) {
+      detener();
+      return;
+    }
+
+    if (recorridoActivo) {
+      estado.textContent =
+        "No se puede probar durante un recorrido.";
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      estado.textContent = "GPS no disponible.";
+      return;
+    }
+
+    const actual = ++generacion;
+
+    boton.textContent = "DETENER PRUEBA";
+    estado.textContent = "Buscando ubicacion...";
+
+    vigilancia = navigator.geolocation.watchPosition(
+      async posicion => {
+        if (enviando || actual !== generacion) return;
+
+        enviando = true;
+
+        try {
+          const token = sessionStorage.getItem(
+            "vientosur_conductor_token"
+          );
+
+          const respuesta = await fetch(
+            "/api/conductor/gps-prueba",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+              },
+              body: JSON.stringify({
+                latitud: posicion.coords.latitude,
+                longitud: posicion.coords.longitude
+              })
+            }
+          );
+
+          const datos = await respuesta.json();
+
+          if (!respuesta.ok || !datos.ok) {
+            throw new Error(datos.mensaje || "Error servidor");
+          }
+
+          if (actual === generacion) {
+            estado.textContent =
+              "GPS enviado: " +
+              new Date().toLocaleTimeString("es-CL");
+          }
+        } catch (error) {
+          if (actual === generacion) {
+            estado.textContent = "Error: " + error.message;
+          }
+        } finally {
+          enviando = false;
+        }
+      },
+      error => {
+        if (actual !== generacion) return;
+        estado.textContent = "GPS: " + error.message;
+        detener();
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 20000
+      }
+    );
+  });
+
+  window.addEventListener("pagehide", () => {
+    if (vigilancia !== null) detener();
+  });
+})();
 </script>
 
 </body>

@@ -281,7 +281,19 @@ async function actualizarMapaConductores() {
         let marcador = marcadoresConductores.get(id);
 
         if (!marcador) {
-          marcador = L.marker([lat, lng]).addTo(mapaConductores);
+          const opcionesMarcador = recorrido.es_prueba
+            ? {
+                icon: L.divIcon({
+                  className: "",
+                  html: String.fromCharCode(128993),
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12]
+                })
+              }
+            : {};
+
+          marcador = L.marker([lat, lng], opcionesMarcador)
+            .addTo(mapaConductores);
           marcadoresConductores.set(id, marcador);
         } else {
           marcador.setLatLng([lat, lng]);
