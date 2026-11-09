@@ -465,6 +465,82 @@ async function recuperarRecorrido() {
   }
 }
 
+
+let vigilanciaGPSConductor = null;
+
+function detenerGPSConductor() {
+  if (vigilanciaGPSConductor !== null) {
+    navigator.geolocation.clearWatch(vigilanciaGPSConductor);
+    vigilanciaGPSConductor = null;
+  }
+
+  document.getElementById("gps").textContent = "ACTIVAR GPS";
+  document.getElementById("estadoGPS").textContent = "GPS desactivado";
+}
+
+function iniciarGPSConductor() {
+  if (vigilanciaGPSConductor !== null) return;
+
+  const estado = document.getElementById("estadoGPS");
+
+  if (!navigator.geolocation) {
+    estado.textContent = "GPS no disponible";
+    return;
+  }
+
+  estado.textContent = "Buscando ubicacion...";
+
+  vigilanciaGPSConductor = navigator.geolocation.watchPosition(
+    async posicion => {
+      try {
+        const respuesta = await fetch("/api/conductor/ubicacion", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token
+          },
+          body: JSON.stringify({
+            latitud: posicion.coords.latitude,
+            longitud: posicion.coords.longitude
+          })
+        });
+
+        const datos = await respuesta.json();
+
+        if (!respuesta.ok || !datos.ok) {
+          throw new Error(datos.mensaje || "Error GPS");
+        }
+
+        estado.textContent = "GPS activo - " +
+          new Date().toLocaleTimeString("es-CL");
+
+      } catch (error) {
+        estado.textContent = "GPS: " + error.message;
+      }
+    },
+    error => {
+      estado.textContent = "GPS: " + error.message;
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 20000
+    }
+  );
+
+  document.getElementById("gps").textContent = "DETENER GPS";
+}
+
+document.getElementById("gps").onclick = () => {
+  if (!recorridoActivo) return;
+
+  if (vigilanciaGPSConductor !== null) {
+    detenerGPSConductor();
+  } else {
+    iniciarGPSConductor();
+  }
+};
+
 document.getElementById("finalizar").onclick = async () => {
   if (!recorridoActivo) return;
 
@@ -711,132 +787,28 @@ document.getElementById("descargar").addEventListener("click", async () => {
       throw new Error("Permite las ventanas emergentes para descargar.");
     }
 
-    ventana.document.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <title>Producción diaria VientoSur</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 35px; }
-          h1 { color: #17365d; }
-          .dato { margin: 16px 0; font-size: 18px; }
-          .total { font-size: 28px; font-weight: bold; }
-          @media print {
-            button { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <h1>BUSES VIENTOSUR</h1>
-        <h2>Comprobante de producción diaria</h2>
-        <div class="dato"><b>Conductor:</b> ${escapar(nombre)}</div>
-        <div class="dato"><b>Fecha:</b> ${escapar(fecha)}</div>
-        <div class="dato"><b>Boletos validados:</b> ${cantidad}</div>
-        <div class="dato total">
-          Total producido: $${total.toLocaleString("es-CL")}
-        </div>
-        <p>Producción registrada mediante validación de boletos QR.</p>
-        <button onclick="window.print()">GUARDAR COMO PDF / IMPRIMIR</button>
-      
-<script>
-let vigilanciaGPSConductor = null;
-let enviandoGPSConductor = false;
 
-function detenerGPSConductor() {
-  if (vigilanciaGPSConductor !== null) {
-    navigator.geolocation.clearWatch(vigilanciaGPSConductor);
-    vigilanciaGPSConductor = null;
-  }
+    ventana.document.write(
+      "<!DOCTYPE html><html lang='es'><head>" +
+      "<meta charset='UTF-8'>" +
+      "<title>Produccion diaria VientoSur</title>" +
+      "</head><body style='font-family:Arial;padding:25px'>" +
+      "<h1>Buses VientoSur</h1>" +
+      "<h2>Produccion diaria</h2>" +
+      "<p>Conductor: " + escapar(nombre) + "</p>" +
+      "<p>Fecha: " + escapar(fecha) + "</p>" +
+      "<p>Total: $" + total.toLocaleString("es-CL") + "</p>" +
+      "<p>Boletos validados: " + cantidad + "</p>" +
+      "<button onclick='window.print()'>Imprimir</button>" +
+      "</body></html>"
+    );
 
-  const boton = document.getElementById("gps");
-  boton.textContent = "ACTIVAR GPS";
-  document.getElementById("estadoGPS").textContent = "GPS desactivado";
-}
+    ventana.document.close();
 
-function iniciarGPSConductor() {
-  if (!recorridoActivo) {
-    alert("Primero debes iniciar un recorrido.");
-    return;
-  }
-
-  if (!navigator.geolocation) {
-    alert("Este celular no admite geolocalización.");
-    return;
-  }
-
-  if (vigilanciaGPSConductor !== null) return;
-
-  const boton = document.getElementById("gps");
-  boton.textContent = "ACTIVANDO GPS...";
-  document.getElementById("estadoGPS").textContent = "Buscando ubicación...";
-
-  vigilanciaGPSConductor = navigator.geolocation.watchPosition(
-    async posicion => {
-      boton.textContent = "ENVIANDO GPS...";
-
-      if (enviandoGPSConductor || !recorridoActivo) return;
-
-      enviandoGPSConductor = true;
-
-      try {
-        const tokenGPS = sessionStorage.getItem(
-          "vientosur_conductor_token"
-        );
-
-        const respuesta = await fetch("/api/conductor/ubicacion", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + tokenGPS
-          },
-          body: JSON.stringify({
-            latitud: posicion.coords.latitude,
-            longitud: posicion.coords.longitude
-          })
-        });
-
-        if (!respuesta.ok) {
-          throw new Error("El servidor rechazó la ubicación");
-        }
-
-        const datos = await respuesta.json();
-
-        if (!datos.ok) {
-          throw new Error("No se confirmó la ubicación");
-        }
-
-        boton.textContent = "GPS CONECTADO";
-        document.getElementById("estadoGPS").textContent =
-          "Ubicación enviada correctamente: " +
-          new Date().toLocaleTimeString("es-CL");
-      } catch (error) {
-        console.error("Error enviando GPS:", error);
-        boton.textContent = "GPS SIN CONEXIÓN";
-        document.getElementById("estadoGPS").textContent =
-          "No se pudo enviar la ubicación al servidor.";
-      } finally {
-        enviandoGPSConductor = false;
-      }
-    },
-    error => {
-      console.error("Error GPS:", error);
-      detenerGPSConductor();
-      alert("No se pudo obtener la ubicación. Revisa los permisos del celular.");
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 10000,
-      timeout: 20000
-    }
-  );
-}
-
-document.getElementById("gps").addEventListener("click", () => {
-  if (vigilanciaGPSConductor !== null) {
-    detenerGPSConductor();
-  } else {
-    iniciarGPSConductor();
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    boton.disabled = false;
   }
 });
 </script>
@@ -1128,20 +1100,6 @@ document.getElementById("reportarIncidencia")
     if (vigilancia !== null) detener();
   });
 })();
-</script>
-
-</body>
-      </html>
-    `);
-
-    ventana.document.close();
-
-  } catch (error) {
-    alert(error.message);
-  } finally {
-    boton.disabled = false;
-  }
-});
 </script>
 
 </body>
