@@ -59,6 +59,18 @@ async function enviarCorreoSMTP(correo, nombre, origen, destino, fecha, hora, as
         <p>Fecha: ${fecha}</p>
         <p>Hora: ${hora}</p>
         <p>Asiento: ${asiento}</p>
+        <hr>
+        <h3>SEGUIR MI BUS</h3>
+        <p>Para consultar tu bus, copia este código privado:</p>
+        <p style="overflow-wrap:anywhere;font-weight:bold">
+          ${codigoQR || "No disponible"}
+        </p>
+        <p>
+          <a href="https://busesvientosur.cl/seguir-mi-bus.html">
+            BUSCAR MI BUS
+          </a>
+        </p>
+        <p>Este código es personal. No lo compartas.</p>
       `,
       attachments: [
         {
@@ -258,15 +270,26 @@ function generarPDF(nombre, origen, destino, fecha, hora, asiento, codigoQR = nu
         width: 102,
         height: 102
       });
+      // Codigo privado del boleto, debajo del QR
+      doc.font("Helvetica")
+         .fontSize(6)
+         .fillColor("#103b70")
+         .text("CODIGO PARA SEGUIR MI BUS", 28, 522, {
+           width: 284,
+           align: "center"
+         });
 
       doc.font("Helvetica")
-         .fontSize(8)
-         .fillColor("#64748b")
-         .text(
-           "Presenta este QR al conductor",
-           28, 522,
-           { width: 284, align: "center" }
-         );
+         .fontSize(5.5)
+         .fillColor("#334155")
+         .text(String(codigoQR), 28, 536, {
+           width: 284,
+           align: "center",
+           lineBreak: false
+         });
+
+
+
     }
 
     doc.roundedRect(28, 559, 284, 32, 6).fill("#e8f4f8");
@@ -1381,6 +1404,233 @@ app.post("/api/auth/login", limitarAuth, async (req, res) => {
     res.status(500).json({
       ok: false,
       mensaje: "No se pudo iniciar sesión."
+    });
+  }
+});
+
+
+
+// SEGUIMIENTO PRIVADO POR CUENTA Y BOLETO PAGADO
+function distanciaEntreGPS(a,b,c,d) {
+  const rad = n => n * Math.PI / 180;
+  const x = Math.sin(rad(c-a)/2)**2 +
+    Math.cos(rad(a)) * Math.cos(rad(c)) *
+    Math.sin(rad(d-b)/2)**2;
+  return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1,x)));
+}
+
+const { calcularLlegadaBus } = require("./calcular-llegada-bus");
+
+const movimientosSeguimiento = new Map();
+
+app.post("/api/seguir-mi-bus/consultar", async (req,res) => {
+  res.set("Cache-Control","no-store");
+
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7).trim() : "";
+
+    if (!token) {
+      return res.status(401).json({
+        ok:false,
+        mensaje:"Primero inicia sesion en VientoSur."
+      });
+    }
+
+    const auth = clienteAuthVientoSur();
+    const {data:sesion,error:errorAuth} =
+      await auth.auth.getUser(token);
+
+    if (errorAuth || !sesion?.user?.email) {
+      return res.status(401).json({
+        ok:false,
+        mensaje:"Tu sesion vencio. Vuelve a ingresar."
+      });
+    }
+
+    const codigo = String(req.body?.codigo || "")
+      .trim().toLowerCase();
+
+    const lat = Number(req.body?.latitud);
+    const lon = Number(req.body?.longitud);
+
+    if (!/^[a-f0-9]{48}$/.test(codigo) ||
+        req.body?.latitud == null ||
+        req.body?.longitud == null ||
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon) ||
+        Math.abs(lat)>90 ||
+        Math.abs(lon)>180) {
+      return res.status(400).json({
+        ok:false,
+        mensaje:"Codigo de boleto o GPS invalido."
+      });
+    }
+
+    const correo = sesion.user.email.trim().toLowerCase();
+
+    const {data:venta,error:errorVenta} = await supabase
+      .from("ventas")
+      .select("fecha,hora,ruta,correo_destino")
+      .eq("codigo_qr",codigo)
+      .eq("estado","pagado")
+      .maybeSingle();
+
+    if (errorVenta) throw errorVenta;
+
+    if (!venta ||
+        String(venta.correo_destino||"")
+          .trim().toLowerCase() !== correo) {
+      return res.status(403).json({
+        ok:false,
+        mensaje:"Este boleto no corresponde a tu cuenta o no esta pagado."
+      });
+    }
+
+    const hoy = new Intl.DateTimeFormat("en-CA",{
+      timeZone:"America/Santiago",
+      year:"numeric",month:"2-digit",day:"2-digit"
+    }).format(new Date());
+
+    if (String(venta.fecha).slice(0,10) !== hoy) {
+      return res.json({
+        ok:true,
+        estado:"esperando",
+        mensaje:"Puedes seguir tu bus solamente el dia del viaje."
+      });
+    }
+
+    const ruta = String(venta.ruta || "").split(/\s+-\s+/);
+
+    if (ruta.length !== 2) {
+      return res.json({
+        ok:true,
+        estado:"esperando",
+        mensaje:"No se pudo identificar la ruta de tu boleto."
+      });
+    }
+
+    const {data:buses,error:errorBuses} = await supabase
+      .from("recorridos_conductor")
+      .select("latitud,longitud,gps_actualizado_at")
+      .eq("fecha",hoy)
+      .eq("hora",String(venta.hora).slice(0,5))
+      .eq("origen",ruta[0])
+      .eq("destino",ruta[1])
+      .eq("estado","activo")
+      .limit(2);
+
+    if (errorBuses) throw errorBuses;
+
+    if (!buses?.length) {
+      return res.json({
+        ok:true,
+        estado:"esperando",
+        mensaje:"El conductor aun no inicia este recorrido."
+      });
+    }
+
+    if (buses.length !== 1) {
+      return res.json({
+        ok:true,
+        estado:"esperando",
+        mensaje:"Hay varios buses en este horario. No podemos identificar el tuyo."
+      });
+    }
+
+    const bus = buses[0];
+    const actualizado = Date.parse(bus.gps_actualizado_at || "");
+
+    if (bus.latitud == null ||
+        bus.longitud == null ||
+        !Number.isFinite(actualizado) ||
+        Math.abs(Date.now()-actualizado)>120000) {
+      return res.json({
+        ok:true,
+        estado:"sin_gps",
+        mensaje:"El bus esta en recorrido, pero su GPS no esta actualizado."
+      });
+    }
+
+
+
+
+    // Distancia aproximada entre ambos GPS
+    const distancia = distanciaEntreGPS(
+      lat,
+      lon,
+      Number(bus.latitud),
+      Number(bus.longitud)
+    );
+
+    if (!Number.isFinite(distancia)) {
+      return res.json({
+        ok: true,
+        estado: "sin_gps",
+        mensaje: "No se pudo calcular la ubicacion."
+      });
+    }
+
+    // Verificar movimiento del bus antes de estimar llegada
+    const claveSeguimiento = codigo;
+    const anterior = movimientosSeguimiento.get(claveSeguimiento);
+    const ahora = Date.now();
+
+    movimientosSeguimiento.set(claveSeguimiento, {
+      distancia,
+      gpsFecha: actualizado,
+      hora: ahora
+    });
+
+    if (movimientosSeguimiento.size > 1000) {
+      movimientosSeguimiento.clear();
+    }
+
+    if (
+      !anterior ||
+      ahora - anterior.hora > 180000 ||
+      actualizado <= anterior.gpsFecha
+    ) {
+      return res.json({
+        ok: true,
+        estado: "en_recorrido",
+        mensaje: "Bus en recorrido. Calculando si se acerca a tu ubicacion..."
+      });
+    }
+
+    const diferencia = anterior.distancia - distancia;
+
+    if (diferencia < -0.1) {
+      return res.json({
+        ok: true,
+        estado: "en_recorrido",
+        mensaje: "El bus se esta alejando de tu ubicacion. No podemos confirmar si ya paso."
+      });
+    }
+
+    if (diferencia < 0.05) {
+      return res.json({
+        ok: true,
+        estado: "en_recorrido",
+        mensaje: "El bus esta detenido o todavia no podemos confirmar que se acerque."
+      });
+    }
+
+    const minutos = Math.max(1, Math.ceil(distancia / 30 * 60));
+
+    return res.json({
+      ok: true,
+      estado: "activo",
+      minutos,
+      mensaje: "Tiempo orientativo. El camino, las curvas y las paradas pueden cambiar la llegada."
+    });
+
+  } catch(error) {
+    console.error("ERROR SEGUIR MI BUS:",error);
+    return res.status(500).json({
+      ok:false,
+      mensaje:"No se pudo consultar el seguimiento."
     });
   }
 });
