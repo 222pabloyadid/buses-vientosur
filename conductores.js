@@ -7,6 +7,63 @@ function crearRutasConductores(supabase) {
   const router = express.Router();
   const sesiones = new Map();
 
+
+
+  router.post("/activar", async (req, res) => {
+    try {
+      const token = String(req.body?.token || "");
+      const password = req.body?.password;
+
+      if (
+        !/^[a-f0-9]{64}$/.test(token) ||
+        typeof password !== "string" ||
+        password.length < 12 ||
+        password.length > 128
+      ) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Enlace inválido o contraseña demasiado corta."
+        });
+      }
+
+      const token_hash = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
+      const clave_hash = await bcrypt.hash(password, 12);
+
+      const { data, error } = await supabase.rpc(
+        "activar_conductor_invitado",
+        {
+          p_token_hash: token_hash,
+          p_clave_hash: clave_hash
+        }
+      );
+
+      if (error) throw error;
+
+      if (data !== true) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Enlace vencido, utilizado o cuenta no autorizada."
+        });
+      }
+
+      return res.json({
+        ok: true,
+        mensaje: "Contraseña creada correctamente."
+      });
+
+    } catch (error) {
+      console.error("ERROR ACTIVACION:", error);
+      return res.status(500).json({
+        ok: false,
+        mensaje: "No se pudo activar la cuenta."
+      });
+    }
+  });
+
   router.post("/login", async (req, res) => {
     try {
       const { usuario, password } = req.body || {};

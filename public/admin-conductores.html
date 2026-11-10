@@ -43,6 +43,31 @@ small{color:#64748b}
   color: white;
 }
 </style>
+
+<style>
+header{padding:13px}
+header h1{font-size:21px;margin:0}
+header p{font-size:12px;margin:5px 0 0}
+main{margin:8px auto;padding:10px}
+section{padding:14px;margin-bottom:10px}
+h2{font-size:17px;margin:0 0 10px}
+input{padding:10px;margin:7px 0}
+button{padding:10px 12px;font-size:13px}
+#mapa-conductores{height:240px}
+.conductor{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+}
+.acciones{display:flex;gap:5px;flex-wrap:wrap}
+.acciones button{padding:8px;font-size:12px}
+.btn-suspender{background:#d97706}
+.btn-reactivar{background:#16834a}
+.btn-eliminar{background:#c62828}
+</style>
+
 </head>
 <body>
 <header>
@@ -79,7 +104,7 @@ small{color:#64748b}
 <form id="formConductor">
 <input id="nombre" placeholder="Nombre completo" required minlength="3" maxlength="100">
 <input id="usuario" placeholder="Usuario de acceso" required minlength="4" maxlength="40">
-<input id="password" type="password" placeholder="Contraseña (mínimo 12 caracteres)" required minlength="12">
+
 <button type="submit">CREAR CONDUCTOR</button>
 </form>
 </section>
@@ -122,6 +147,31 @@ function aviso(texto) {
   document.getElementById("mensaje").textContent = texto;
 }
 
+
+async function cambiarEstadoConductor(conductor, accion) {
+  const pregunta = accion === "eliminar"
+    ? "¿Dar de baja a " + conductor.nombre + "? Perderá acceso, pero se conservarán sus recorridos."
+    : "¿" + accion + " a " + conductor.nombre + "?";
+
+  if (!confirm(pregunta)) return;
+
+  try {
+    const datos = await solicitar(
+      encodeURIComponent(conductor.id) + "/estado",
+      {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({accion})
+      }
+    );
+
+    aviso(datos.mensaje);
+    await cargarConductores();
+  } catch (error) {
+    aviso(error.message);
+  }
+}
+
 async function cargarConductores() {
   const datos = await solicitar("listar");
   const lista = document.getElementById("lista");
@@ -131,20 +181,77 @@ async function cargarConductores() {
     const elemento = document.createElement("div");
     elemento.className = "conductor";
 
+    const info = document.createElement("div");
     const nombre = document.createElement("strong");
     nombre.textContent = conductor.nombre;
 
-    const detalle = document.createElement("div");
+    const detalle = document.createElement("small");
     detalle.textContent =
-      "Usuario: " + conductor.usuario +
-      " | " + (conductor.activo ? "Habilitado" : "Deshabilitado");
+      conductor.usuario + " · " +
+      (conductor.pendiente_activacion ? "Pendiente de invitación" : conductor.activo ? "Activo" : "Suspendido");
 
-    elemento.append(nombre, detalle);
+    info.append(nombre, document.createElement("br"), detalle);
+
+    const acciones = document.createElement("div");
+    acciones.className = "acciones";
+
+
+    const opciones = conductor.pendiente_activacion
+      ? [["Invitar por WhatsApp", "invitar", "btn-reactivar"]]
+      : conductor.activo
+        ? [["Suspender", "suspender", "btn-suspender"]]
+        : [["Reactivar", "reactivar", "btn-reactivar"]];
+
+    opciones.push(["Eliminar", "eliminar", "btn-eliminar"]);
+
+
+    for (const [texto, accion, clase] of opciones) {
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.textContent = texto;
+      boton.className = clase;
+
+      boton.onclick = async () => {
+        if (accion !== "invitar") {
+          return cambiarEstadoConductor(conductor, accion);
+        }
+
+        boton.disabled = true;
+
+        try {
+          const datos = await solicitar(
+            encodeURIComponent(conductor.id) + "/invitar",
+            { method: "POST" }
+          );
+
+          const mensaje =
+            "Hola " + conductor.nombre +
+            ", Buses VientoSur te invita a configurar tu acceso. " +
+            "Tu usuario es " + conductor.usuario +
+            ". Crea tu contraseña aquí: " + datos.enlace;
+
+          window.open(
+            "https://wa.me/?text=" + encodeURIComponent(mensaje),
+            "_blank"
+          );
+
+          aviso("Invitación generada. Selecciona el contacto en WhatsApp.");
+        } catch (error) {
+          aviso(error.message);
+        } finally {
+          boton.disabled = false;
+        }
+      };
+
+      acciones.appendChild(boton);
+    }
+
+    elemento.append(info, acciones);
     lista.appendChild(elemento);
   }
 
   if (!datos.conductores.length) {
-    lista.textContent = "Todavía no hay conductores registrados.";
+    lista.textContent = "No hay conductores registrados.";
   }
 }
 
@@ -162,25 +269,52 @@ document.getElementById("entrar").onclick = async () => {
   }
 };
 
+
 document.getElementById("formConductor").onsubmit = async evento => {
   evento.preventDefault();
   const boton = evento.submitter;
   boton.disabled = true;
 
   try {
-    await solicitar("crear", {
+    const datos = await solicitar("crear", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
         nombre: document.getElementById("nombre").value.trim(),
-        usuario: document.getElementById("usuario").value.trim(),
-        password: document.getElementById("password").value
+        usuario: document.getElementById("usuario").value.trim()
       })
     });
 
     document.getElementById("formConductor").reset();
     await cargarConductores();
-    aviso("Conductor registrado correctamente.");
+
+    const anterior = document.getElementById("enlaceInvitacion");
+    if (anterior) anterior.remove();
+
+    const enlace = document.createElement("a");
+    enlace.id = "enlaceInvitacion";
+    enlace.target = "_blank";
+    enlace.rel = "noopener noreferrer";
+    enlace.textContent = "ENVIAR INVITACIÓN POR WHATSAPP";
+    enlace.style.cssText =
+      "display:block;background:#16834a;color:white;" +
+      "padding:13px;border-radius:10px;text-align:center;" +
+      "margin:12px 0;font-weight:bold;text-decoration:none";
+
+    const mensaje =
+      "Hola " + datos.conductor.nombre +
+      ", bienvenido a Buses VientoSur. " +
+      "Tu usuario es " + datos.conductor.usuario +
+      ". Crea tu contraseña aquí: " + datos.enlace;
+
+    enlace.href = "https://wa.me/?text=" +
+      encodeURIComponent(mensaje);
+
+    document.getElementById("formConductor")
+      .insertAdjacentElement("afterend", enlace);
+
+    aviso("Conductor creado. Pulsa el botón verde para enviar WhatsApp.");
+
   } catch (error) {
     aviso(error.message);
   } finally {

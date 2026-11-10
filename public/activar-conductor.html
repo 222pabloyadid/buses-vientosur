@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Activar acceso | Buses VientoSur</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(145deg,#123c70,#087ca3);
+  font-family:Arial,sans-serif;
+  padding:18px;
+}
+main{
+  width:100%;
+  max-width:390px;
+  background:white;
+  padding:27px;
+  border-radius:20px;
+  box-shadow:0 12px 35px #0003;
+}
+h1{color:#123c70;font-size:25px;margin:0}
+p{color:#526579;line-height:1.5}
+input{
+  width:100%;
+  padding:14px;
+  border:1px solid #ccd5df;
+  border-radius:10px;
+  margin:8px 0;
+  font-size:16px;
+}
+button{
+  width:100%;
+  padding:15px;
+  background:#087c59;
+  color:white;
+  border:0;
+  border-radius:10px;
+  font-size:16px;
+  font-weight:bold;
+  margin-top:12px;
+}
+button:disabled{opacity:.5}
+#mensaje{font-weight:bold}
+</style>
+</head>
+<body>
+<main>
+<h1>BUSES VIENTOSUR</h1>
+<p>Bienvenido al equipo. Crea tu contraseña para ingresar al panel de conductor.</p>
+
+<form id="formulario">
+<input id="clave" type="password"
+ placeholder="Nueva contraseña (mínimo 12 caracteres)"
+ minlength="12" maxlength="128" required
+ autocomplete="new-password">
+
+<input id="confirmar" type="password"
+ placeholder="Repite tu contraseña"
+ minlength="12" maxlength="128" required
+ autocomplete="new-password">
+
+<button id="guardar" type="submit">ACTIVAR MI CUENTA</button>
+</form>
+
+<p id="mensaje" role="status"></p>
+</main>
+
+<script>
+const token = new URLSearchParams(location.search).get("token");
+
+document.getElementById("formulario").onsubmit = async evento => {
+  evento.preventDefault();
+
+  const password = document.getElementById("clave").value;
+  const confirmar = document.getElementById("confirmar").value;
+  const mensaje = document.getElementById("mensaje");
+  const boton = document.getElementById("guardar");
+
+  if (password !== confirmar) {
+    mensaje.textContent = "Las contraseñas no coinciden.";
+    return;
+  }
+
+  if (!token) {
+    mensaje.textContent = "Enlace de invitación inválido.";
+    return;
+  }
+
+  boton.disabled = true;
+
+  try {
+    const respuesta = await fetch("/api/conductor/activar", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({token,password})
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok || !datos.ok) {
+      throw new Error(datos.mensaje || "No se pudo activar");
+    }
+
+    document.getElementById("formulario").style.display = "none";
+    mensaje.textContent = "Contraseña creada correctamente. Ya puedes ingresar.";
+
+    history.replaceState(null, "", location.pathname);
+
+  } catch(error) {
+    mensaje.textContent = error.message;
+  } finally {
+    boton.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
