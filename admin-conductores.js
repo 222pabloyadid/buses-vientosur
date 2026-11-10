@@ -156,8 +156,8 @@ module.exports = function crearAdminConductores(supabase) {
     try {
       const { data, error } = await supabase
         .from("conductores")
-        .select("id,nombre,usuario,activo,creado_at")
-        .order("nombre");
+        .select("id,nombre,usuario,activo,pendiente_activacion,creado_at")
+        .is("eliminado_at", null).order("nombre");
 
       if (error) throw error;
 
@@ -214,13 +214,22 @@ module.exports = function crearAdminConductores(supabase) {
         cambios.pendiente_activacion = false;
       }
 
-      const { error } = await supabase
+      const { data: actualizado, error } = await supabase
         .from("conductores")
         .update(cambios)
         .eq("id", registrado.id)
-        .is("eliminado_at", null);
+        .is("eliminado_at", null)
+        .select("id")
+        .maybeSingle();
 
       if (error) throw error;
+
+      if (!actualizado) {
+        return res.status(409).json({
+          ok: false,
+          mensaje: "No se pudo cambiar el estado del conductor."
+        });
+      }
 
       return res.json({
         ok: true,

@@ -111,7 +111,7 @@ button{padding:10px 12px;font-size:13px}
 
 <section>
 <h2>Conductores registrados</h2>
-<div id="lista"></div>
+<p id="estadoLista" role="status" style="font-weight:bold;color:#123c70"></p><div id="lista"></div>
 <button id="actualizar">ACTUALIZAR LISTA</button>
 </section>
 
@@ -148,6 +148,15 @@ function aviso(texto) {
 }
 
 
+function avisarLista(texto, error = false) {
+  const elemento = document.getElementById("estadoLista");
+  if (elemento) {
+    elemento.textContent = texto;
+    elemento.style.color = error ? "#b91c1c" : "#16834a";
+  }
+  aviso(texto);
+}
+
 async function cambiarEstadoConductor(conductor, accion) {
   const pregunta = accion === "eliminar"
     ? "¿Dar de baja a " + conductor.nombre + "? Perderá acceso, pero se conservarán sus recorridos."
@@ -165,10 +174,10 @@ async function cambiarEstadoConductor(conductor, accion) {
       }
     );
 
-    aviso(datos.mensaje);
+    avisarLista(datos.mensaje);
     await cargarConductores();
   } catch (error) {
-    aviso(error.message);
+    avisarLista(error.message, true);
   }
 }
 
@@ -323,11 +332,18 @@ document.getElementById("formConductor").onsubmit = async evento => {
 };
 
 document.getElementById("actualizar").onclick = async () => {
+  const boton = document.getElementById("actualizar");
+  boton.disabled = true;
+  boton.textContent = "ACTUALIZANDO...";
+
   try {
     await cargarConductores();
-    aviso("Lista actualizada.");
+    avisarLista("Lista actualizada correctamente.");
   } catch (error) {
-    aviso(error.message);
+    avisarLista(error.message, true);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = "ACTUALIZAR LISTA";
   }
 };
 
