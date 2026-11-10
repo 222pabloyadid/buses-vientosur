@@ -197,14 +197,14 @@ placeholder="Repite tu correo" autocomplete="off">
 <option>Hualpin</option>
 <option>TeodoroSchmidt</option>
 <option>BarrosArana</option>
-<option>Temuco</option>
+<option selected>Temuco</option>
 </select>
 </div>
 
 <div>
 <label for="destino">Destino</label>
 <select id="destino">
-<option>Temuco</option>
+<option>Tolten</option>
 <option>Freire</option>
 <option>Pitrufquen</option>
 </select>
@@ -556,6 +556,7 @@ document.getElementById("mes-siguiente")
     dibujarCalendario();
   });
 
+window.addEventListener("DOMContentLoaded", actualizarDestinos);
 </script>
 
 <script>
