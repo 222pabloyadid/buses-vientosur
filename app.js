@@ -1269,7 +1269,7 @@ app.post("/api/auth/registro", limitarAuth, async (req, res) => {
       return res.status(error.status === 429 ? 429 : 400).json({
         ok: false,
         mensaje: error.status === 429
-          ? "Límite de registros alcanzado. Intenta más tarde."
+          ? "Demasiados intentos de registro. Por seguridad, espera aproximadamente 1 minuto antes de volver a intentarlo. Revisa también tu correo, porque podrías haber recibido el enlace de confirmación."
           : "No se pudo completar el registro. Revisa los datos."
       });
     }
