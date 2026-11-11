@@ -38,6 +38,7 @@ cargarBloqueos();
 
 
 const { Resend } = require("resend");
+const { crearServicioBienvenida } = require("./correos-bienvenida");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 
@@ -1770,6 +1771,53 @@ async function procesarReintentosBoletos() {
 }
 
 setInterval(procesarReintentosBoletos, 30000);
+
+
+// BIENVENIDA VIENTOSUR - EJECUCION CONTROLADA
+const servicioBienvenida = crearServicioBienvenida(supabase);
+
+async function procesarBienvenidasMasivas() {
+  if (process.env.BIENVENIDAS_MASIVAS !== "true") {
+    console.log("BIENVENIDAS MASIVAS DESACTIVADAS");
+    return;
+  }
+
+  const auth = clienteAuthVientoSur();
+  let pagina = 1;
+  let enviados = 0;
+  let omitidos = 0;
+
+  while (true) {
+    const { data, error } = await auth.auth.admin.listUsers({
+      page: pagina,
+      perPage: 100
+    });
+
+    if (error) {
+      console.error("ERROR LISTANDO USUARIOS:", error.message);
+      break;
+    }
+
+    const usuarios = data?.users || [];
+
+    for (const usuario of usuarios) {
+      try {
+        const resultado = await servicioBienvenida.enviarBienvenida(usuario);
+        if (resultado.enviado) enviados++;
+        else omitidos++;
+      } catch (errorEnvio) {
+        console.error("ERROR BIENVENIDA:", errorEnvio.message);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
+    if (usuarios.length < 100) break;
+    pagina++;
+  }
+
+  console.log("BIENVENIDAS FINALIZADAS:", { enviados, omitidos });
+}
 
 app.listen(PORT, () => {
   console.log("Servidor corriendo en puerto", PORT);
