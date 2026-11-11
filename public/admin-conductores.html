@@ -292,6 +292,7 @@ document.getElementById("entrar").onclick = async () => {
 
     document.getElementById("acceso").style.display = "none";
     document.getElementById("panel").style.display = "block";
+    iniciarSeguimientoAdmin();
     aviso("");
 
   } catch (error) {
@@ -413,6 +414,7 @@ document.getElementById("salir").onclick = async () => {
 
     document.getElementById("acceso").style.display = "none";
     document.getElementById("panel").style.display = "block";
+    iniciarSeguimientoAdmin();
 
   } catch (error) {
     // Conservar la sesion si solo falla la conexion.
@@ -431,6 +433,34 @@ let mapaConductores = null;
 let marcadoresConductores = new Map();
 let conductorSeleccionado = null;
 let intervaloConductores = null;
+
+
+function iniciarSeguimientoAdmin() {
+  if (document.getElementById("panel").style.display !== "block") {
+    return;
+  }
+
+  if (typeof L === "undefined") {
+    document.getElementById("estado-gps").textContent =
+      "No se pudo cargar el mapa. Revisa la conexion.";
+    return;
+  }
+
+  prepararMapaConductores();
+
+  setTimeout(() => {
+    if (mapaConductores) mapaConductores.invalidateSize();
+  }, 300);
+
+  actualizarMapaConductores();
+
+  if (!intervaloConductores) {
+    intervaloConductores = setInterval(
+      actualizarMapaConductores,
+      15000
+    );
+  }
+}
 
 function prepararMapaConductores() {
   if (mapaConductores) {
