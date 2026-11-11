@@ -265,16 +265,43 @@ async function cargarConductores() {
 }
 
 document.getElementById("entrar").onclick = async () => {
-  clave = document.getElementById("claveAdmin").value;
+  const boton = document.getElementById("entrar");
+  boton.disabled = true;
+
   try {
-    await cargarConductores();
+    const respuesta = await fetch("/api/admin/conductores/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clave: document.getElementById("claveAdmin").value
+      })
+    });
+
+    const datos = await respuesta.json();
+
+    if (!respuesta.ok || !datos.ok) {
+      throw new Error(datos.mensaje || "No autorizado");
+    }
+
+    clave = datos.token;
+    localStorage.setItem("vientosur_admin_token", clave);
+
     document.getElementById("claveAdmin").value = "";
+
+    await cargarConductores();
+
     document.getElementById("acceso").style.display = "none";
     document.getElementById("panel").style.display = "block";
     aviso("");
+
   } catch (error) {
-    clave = "";
+    if (clave) {
+      localStorage.removeItem("vientosur_admin_token");
+      clave = "";
+    }
     aviso(error.message);
+  } finally {
+    boton.disabled = false;
   }
 };
 
@@ -347,12 +374,55 @@ document.getElementById("actualizar").onclick = async () => {
   }
 };
 
-document.getElementById("salir").onclick = () => {
-  clave = "";
-  document.getElementById("panel").style.display = "none";
-  document.getElementById("acceso").style.display = "block";
-  aviso("");
+document.getElementById("salir").onclick = async () => {
+  const boton = document.getElementById("salir");
+  boton.disabled = true;
+
+  try {
+    const respuesta = await fetch("/api/admin/conductores/logout", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + clave }
+    });
+
+    if (!respuesta.ok) {
+      throw new Error("No se pudo cerrar sesion");
+    }
+
+    localStorage.removeItem("vientosur_admin_token");
+    clave = "";
+
+    document.getElementById("panel").style.display = "none";
+    document.getElementById("acceso").style.display = "block";
+    aviso("");
+
+  } catch (error) {
+    aviso(error.message);
+  } finally {
+    boton.disabled = false;
+  }
 };
+// RECUPERAR SESION ADMINISTRATIVA
+(async () => {
+  const guardado = localStorage.getItem("vientosur_admin_token");
+  if (!guardado) return;
+
+  clave = guardado;
+
+  try {
+    await cargarConductores();
+
+    document.getElementById("acceso").style.display = "none";
+    document.getElementById("panel").style.display = "block";
+
+  } catch (error) {
+    // Conservar la sesion si solo falla la conexion.
+    if (/no autorizada|no autorizado|vencida|incorrecta/i.test(error.message)) {
+      localStorage.removeItem("vientosur_admin_token");
+      clave = "";
+    }
+  }
+})();
+
 </script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

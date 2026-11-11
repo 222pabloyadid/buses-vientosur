@@ -103,10 +103,22 @@ function crearRutasConductores(supabase) {
 
       const token = crypto.randomBytes(32).toString("hex");
 
-      sesiones.set(token, {
-        conductor_id: conductor.id,
-        expira: Date.now() + 12 * 60 * 60 * 1000
-      });
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
+      const { error: errorSesion } = await supabase
+        .from("sesiones_conductores")
+        .insert({
+          token_hash: tokenHash,
+          conductor_id: conductor.id,
+          expira_at: new Date(
+            Date.now() + 30 * 86400000
+          ).toISOString()
+        });
+
+      if (errorSesion) throw errorSesion;
 
       res.json({
         ok: true,
@@ -122,6 +134,139 @@ function crearRutasConductores(supabase) {
       res.status(500).json({
         ok: false,
         mensaje: "Error al ingresar"
+      });
+    }
+  });
+
+
+  // AUTENTICACION PERSISTENTE DEL CONDUCTOR
+  router.use(async (req, res, next) => {
+    try {
+      const token = String(
+        req.headers.authorization || ""
+      ).replace(/^Bearer /, "").trim();
+
+      if (!/^[a-f0-9]{64}$/.test(token)) {
+        return res.status(401).json({
+          ok: false,
+          mensaje: "Sesion no valida"
+        });
+      }
+
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
+      const { data, error } = await supabase
+        .from("sesiones_conductores")
+        .select("conductor_id,expira_at,ultimo_uso_at")
+        .eq("token_hash", tokenHash)
+        .is("revocado_at", null)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      const ahora = Date.now();
+
+      if (!data || new Date(data.expira_at).getTime() <= ahora) {
+        return res.status(401).json({
+          ok: false,
+          mensaje: "Sesion vencida"
+        });
+      }
+
+      const { data: conductor, error: errorConductor } =
+        await supabase
+          .from("conductores")
+          .select("activo")
+          .eq("id", data.conductor_id)
+          .maybeSingle();
+
+      if (errorConductor) throw errorConductor;
+
+      if (!conductor?.activo) {
+        return res.status(401).json({
+          ok: false,
+          mensaje: "Conductor no autorizado"
+        });
+      }
+
+      let expiracion = new Date(data.expira_at).getTime();
+
+      const ultimoUso = data.ultimo_uso_at
+        ? new Date(data.ultimo_uso_at).getTime()
+        : 0;
+
+      if (ahora - ultimoUso > 86400000) {
+        const nuevaExpiracion = new Date(
+          ahora + 30 * 86400000
+        ).toISOString();
+
+        const { data: renovada, error: errorRenovacion } = await supabase
+          .from("sesiones_conductores")
+          .update({
+            ultimo_uso_at: new Date(ahora).toISOString(),
+            expira_at: nuevaExpiracion
+          })
+          .eq("token_hash", tokenHash)
+          .is("revocado_at", null)
+          .gt("expira_at", new Date(ahora).toISOString())
+          .select("token_hash")
+          .maybeSingle();
+
+        if (errorRenovacion) throw errorRenovacion;
+
+        if (!renovada) {
+          return res.status(401).json({
+            ok: false,
+            mensaje: "Sesion revocada o vencida"
+          });
+        }
+
+        expiracion = new Date(nuevaExpiracion).getTime();
+      }
+
+      sesiones.set(token, {
+        conductor_id: data.conductor_id,
+        expira: expiracion
+      });
+
+      req.tokenConductor = token;
+      req.tokenHashConductor = tokenHash;
+
+      next();
+
+    } catch (error) {
+      console.error("ERROR SESION CONDUCTOR:", error);
+      res.status(503).json({
+        ok: false,
+        mensaje: "No se pudo verificar la sesion"
+      });
+    }
+  });
+
+  // CIERRE DE SESION REAL
+  router.post("/logout", async (req, res) => {
+    try {
+      const { error } = await supabase
+        .from("sesiones_conductores")
+        .update({
+          revocado_at: new Date().toISOString()
+        })
+        .eq("token_hash", req.tokenHashConductor);
+
+      if (error) throw error;
+
+      sesiones.delete(req.tokenConductor);
+
+      return res.json({ ok: true });
+
+    } catch (error) {
+      console.error("ERROR LOGOUT:", error);
+      return res.status(500).json({
+        ok: false,
+        mensaje: "No se pudo cerrar sesion"
       });
     }
   });

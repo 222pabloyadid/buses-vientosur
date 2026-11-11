@@ -68,6 +68,30 @@ placeholder="Contraseña" required>
 </main>
 
 <script>
+
+// Recuperar acceso si la sesión sigue vigente
+(async () => {
+  const token = localStorage.getItem("vientosur_conductor_token");
+  if (!token) return;
+
+  try {
+    const respuesta = await fetch("/api/conductor/yo", {
+      headers: {
+        Authorization: "Bearer " + token
+      },
+      cache: "no-store"
+    });
+
+    if (respuesta.ok) {
+      location.replace("/panel-conductor.html");
+    } else if (respuesta.status === 401) {
+      localStorage.removeItem("vientosur_conductor_token");
+    }
+  } catch (error) {
+    console.warn("No se pudo comprobar la sesión:", error.message);
+  }
+})();
+
 const formulario = document.getElementById("login");
 const errorElemento = document.getElementById("error");
 const boton = document.getElementById("entrar");
@@ -93,7 +117,7 @@ formulario.addEventListener("submit", async (e) => {
       throw new Error(datos.mensaje || "No se pudo ingresar");
     }
 
-    sessionStorage.setItem("vientosur_conductor_token",datos.token);
+    localStorage.setItem("vientosur_conductor_token",datos.token);
     location.href="/panel-conductor.html";
 
   } catch (error) {

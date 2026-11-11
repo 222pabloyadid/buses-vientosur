@@ -7,7 +7,7 @@ const gpsPrueba = require("./gps-prueba");
 module.exports = function crearAdminConductores(supabase) {
   const router = express.Router();
 
-  router.use(protegerAdmin);
+  require("./admin-sesiones")(router, supabase);
 
   // Registrar conductor
 

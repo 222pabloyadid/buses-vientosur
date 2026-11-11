@@ -296,7 +296,7 @@ CERRAR SESIÓN
 </main>
 
 <script>
-const token=sessionStorage.getItem("vientosur_conductor_token");
+const token=localStorage.getItem("vientosur_conductor_token");
 if(!token)location.replace("/conductor.html");
 
 
@@ -334,7 +334,9 @@ async function cargarHorarios() {
       ruta.appendChild(opcion);
     });
 
-    mensaje.textContent = "Selecciona tu recorrido y horario.";
+    mensaje.textContent = Object.keys(horariosDisponibles).length
+      ? "Selecciona tu recorrido y horario."
+      : "No hay horarios disponibles. Fecha: " + (datos.fecha || "sin fecha");
 
   } catch (error) {
     mensaje.textContent = error.message;
@@ -369,7 +371,7 @@ async function verificarSesion(){
     document.getElementById("nombre").textContent=
       datos.conductor.nombre;
   }catch{
-    sessionStorage.removeItem("vientosur_conductor_token");
+    localStorage.removeItem("vientosur_conductor_token");
     location.replace("/conductor.html");
   }
 }
@@ -462,6 +464,11 @@ async function recuperarRecorrido() {
 
     if (datos.recorrido) {
       mostrarRecorridoActivo(datos.recorrido);
+
+      gpsDeseado =
+        localStorage.getItem("vientosur_gps_activo") === "1";
+
+      if (gpsDeseado) recuperarGPSConductor();
     }
   } catch (error) {
     console.error("Error recuperando recorrido:", error);
@@ -470,6 +477,34 @@ async function recuperarRecorrido() {
 
 
 let vigilanciaGPSConductor = null;
+// RECONEXION AUTOMATICA GPS VIENTOSUR
+let gpsDeseado = false;
+let ultimoGPSRecibido = 0;
+
+function recuperarGPSConductor() {
+  if (!recorridoActivo || !gpsDeseado || document.hidden) return;
+
+  const sinPosicion = Date.now() - ultimoGPSRecibido > 45000;
+
+  if (vigilanciaGPSConductor === null || sinPosicion) {
+    if (vigilanciaGPSConductor !== null) {
+      navigator.geolocation.clearWatch(vigilanciaGPSConductor);
+      vigilanciaGPSConductor = null;
+    }
+
+    ultimoGPSRecibido = Date.now();
+    iniciarGPSConductor();
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) recuperarGPSConductor();
+});
+
+window.addEventListener("pageshow", recuperarGPSConductor);
+
+setInterval(recuperarGPSConductor, 30000);
+
 
 function detenerGPSConductor() {
   if (vigilanciaGPSConductor !== null) {
@@ -495,6 +530,7 @@ function iniciarGPSConductor() {
 
   vigilanciaGPSConductor = navigator.geolocation.watchPosition(
     async posicion => {
+      ultimoGPSRecibido = Date.now();
       try {
         const respuesta = await fetch("/api/conductor/ubicacion", {
           method: "POST",
@@ -538,8 +574,12 @@ document.getElementById("gps").onclick = () => {
   if (!recorridoActivo) return;
 
   if (vigilanciaGPSConductor !== null) {
+    gpsDeseado = false;
+    localStorage.removeItem("vientosur_gps_activo");
     detenerGPSConductor();
   } else {
+    gpsDeseado = true;
+    localStorage.setItem("vientosur_gps_activo", "1");
     iniciarGPSConductor();
   }
 };
@@ -565,6 +605,8 @@ document.getElementById("finalizar").onclick = async () => {
     }
 
     recorridoActivo = null;
+    gpsDeseado = false;
+    localStorage.removeItem("vientosur_gps_activo");
     detenerGPSConductor();
     document.getElementById("gps").disabled = true;
     await cerrarCamaraQR();
@@ -587,9 +629,33 @@ document.getElementById("finalizar").onclick = async () => {
   }
 };
 
-document.getElementById("salir").onclick=()=>{
-  sessionStorage.removeItem("vientosur_conductor_token");
-  location.replace("/conductor.html");
+document.getElementById("salir").onclick = async () => {
+  const boton = document.getElementById("salir");
+  boton.disabled = true;
+
+  const tokenActual = localStorage.getItem(
+    "vientosur_conductor_token"
+  );
+
+  try {
+    const respuesta = await fetch("/api/conductor/logout", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + tokenActual
+      }
+    });
+
+    if (!respuesta.ok) {
+      throw new Error("No se pudo cerrar la sesion");
+    }
+
+    localStorage.removeItem("vientosur_conductor_token");
+    location.replace("/conductor.html");
+
+  } catch (error) {
+    alert(error.message + ". Intenta nuevamente.");
+    boton.disabled = false;
+  }
 };
 
 verificarSesion();
@@ -699,7 +765,7 @@ document.getElementById("escanear").onclick = async () => {
 
 <script>
 async function actualizarProduccion() {
-  const tokenProduccion = sessionStorage.getItem(
+  const tokenProduccion = localStorage.getItem(
     "vientosur_conductor_token"
   );
 
@@ -744,7 +810,7 @@ document.getElementById("descargar").addEventListener("click", async () => {
   boton.disabled = true;
 
   try {
-    const token = sessionStorage.getItem("vientosur_conductor_token");
+    const token = localStorage.getItem("vientosur_conductor_token");
 
     const [respuestaProduccion, respuestaConductor] = await Promise.all([
       fetch("/api/conductor/produccion", {
@@ -829,7 +895,7 @@ async function cargarPasajesVendidos() {
   const lista = document.getElementById("listaPasajesVendidos");
 
   try {
-    const tokenPasajes = sessionStorage.getItem(
+    const tokenPasajes = localStorage.getItem(
       "vientosur_conductor_token"
     );
 
@@ -932,7 +998,7 @@ async function enviarIncidenciaConductor() {
   estado.textContent = "Enviando incidencia...";
 
   try {
-    const token = sessionStorage.getItem(
+    const token = localStorage.getItem(
       "vientosur_conductor_token"
     );
 
@@ -996,7 +1062,7 @@ document.getElementById("reportarIncidencia")
     boton.textContent = "PROBAR GPS";
     estado.textContent = "Prueba detenida";
 
-    const token = sessionStorage.getItem(
+    const token = localStorage.getItem(
       "vientosur_conductor_token"
     );
 
@@ -1048,7 +1114,7 @@ document.getElementById("reportarIncidencia")
         enviando = true;
 
         try {
-          const token = sessionStorage.getItem(
+          const token = localStorage.getItem(
             "vientosur_conductor_token"
           );
 
