@@ -2,123 +2,25 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Seguir mi bus | VientoSur</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seguimiento de buses | VientoSur</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#edf4fa;font-family:Arial,sans-serif;color:#15385c}
-header{background:#123c70;color:white;text-align:center;padding:22px}
-header h1{font-size:24px;margin:0}
-main{max-width:440px;margin:25px auto;padding:12px}
-section{background:white;padding:23px;border-radius:17px;box-shadow:0 4px 15px #0001}
-input,button{width:100%;padding:14px;border-radius:10px;font-size:16px;margin:10px 0}
-input{border:1px solid #b8c7d6}
-button{background:#087c59;border:0;color:white;font-weight:bold}
-button:disabled{opacity:.5}
-#resultado{margin-top:16px;line-height:1.5}
-#minutos{font-size:35px;color:#087c59;font-weight:bold}
-small{color:#64748b}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(150deg,#07356a,#0879a6);font-family:Arial,sans-serif;padding:20px;box-sizing:border-box}
+.aviso{background:white;border-radius:22px;padding:35px 24px;max-width:420px;width:100%;text-align:center;box-shadow:0 12px 35px #002b5260}
+h1{color:#07518a;font-size:27px}
+p{color:#41536a;line-height:1.7;font-size:17px}
+a{display:inline-block;margin-top:18px;padding:14px 24px;background:#087ac0;color:white;border-radius:12px;text-decoration:none;font-weight:bold}
+.icono{font-size:54px}
 </style>
 </head>
 <body>
-<header><h1>BUSES VIENTOSUR</h1><p>Seguir mi bus</p></header>
-<main>
-<section>
-<h2>Buscar mi bus</h2>
-<p>Ingresa el código de tu boleto pagado.</p>
-<input id="codigo" maxlength="48" placeholder="Código del boleto" autocomplete="off">
-<button id="buscar">ACTIVAR GPS Y BUSCAR</button>
-<div id="resultado" role="status"></div>
-<p><small>La llegada es aproximada y depende del camino.</small></p>
+<main class="aviso">
+<div class="icono">🚧</div>
+<h1>Próximamente disponible</h1>
+<p>Estamos trabajando para implementar el seguimiento de nuestros buses en tiempo real.</p>
+<p>Muy pronto podrás conocer dónde viene tu bus desde nuestra página.</p>
+<p><strong>Buses VientoSur</strong><br>Seguimos mejorando para ti.</p>
 <a href="/">Volver al inicio</a>
-</section>
 </main>
-<script>
-const boton=document.getElementById("buscar");
-const resultado=document.getElementById("resultado");
-let vigilancia=null;
-let intervalo=null;
-let ubicacion=null;
-
-async function consultar(){
-  if(!ubicacion)return;
-  const token=localStorage.getItem("vientosur_token")||"";
-  try{
-    const respuesta=await fetch("/api/seguir-mi-bus/consultar",{
-      method:"POST",
-      cache:"no-store",
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization":"Bearer "+token
-      },
-      body:JSON.stringify({
-        codigo:document.getElementById("codigo").value.trim(),
-        latitud:ubicacion.coords.latitude,
-        longitud:ubicacion.coords.longitude
-      })
-    });
-    const d=await respuesta.json();
-    if(!respuesta.ok||!d.ok)
-      throw new Error(d.mensaje||"No se pudo consultar.");
-
-    resultado.replaceChildren();
-    if(d.estado==="activo"){
-      const tiempo=document.createElement("div");
-      tiempo.id="minutos";
-      tiempo.textContent="Aprox. "+d.minutos+" minutos";
-      const detalle=document.createElement("p");
-      detalle.textContent=d.mensaje;
-      resultado.append(tiempo,detalle);
-    }else{
-      resultado.textContent=d.mensaje;
-    }
-  }catch(error){
-    resultado.textContent=error.message;
-  }
-}
-
-boton.onclick=()=>{
-  const token=localStorage.getItem("vientosur_token");
-  const codigo=document.getElementById("codigo").value.trim();
-
-  if(!token){
-    resultado.textContent="Primero inicia sesion en VientoSur.";
-    return;
-  }
-  if(!/^[a-f0-9]{48}$/i.test(codigo)){
-    resultado.textContent="Ingresa el codigo completo de tu boleto.";
-    return;
-  }
-  if(!navigator.geolocation){
-    resultado.textContent="Tu dispositivo no permite utilizar GPS.";
-    return;
-  }
-
-  if(vigilancia!==null)navigator.geolocation.clearWatch(vigilancia);
-  if(intervalo)clearInterval(intervalo);
-  intervalo=null;
-  ubicacion=null;
-  boton.disabled=true;
-  resultado.textContent="Solicitando acceso a tu GPS...";
-
-  vigilancia=navigator.geolocation.watchPosition(
-    posicion=>{
-      ubicacion=posicion;
-      consultar();
-      if(!intervalo)intervalo=setInterval(consultar,20000);
-    },
-    ()=>{
-      resultado.textContent="Debes permitir el acceso al GPS.";
-      boton.disabled=false;
-    },
-    {enableHighAccuracy:true,maximumAge:10000,timeout:20000}
-  );
-};
-
-window.addEventListener("pagehide",()=>{
-  if(vigilancia!==null)navigator.geolocation.clearWatch(vigilancia);
-  if(intervalo)clearInterval(intervalo);
-});
-</script>
 </body>
 </html>
