@@ -59,6 +59,11 @@ select{
 </form>
 
 <div id="resultado" hidden>
+<div id="saludo-estudiante" style="background:#e9f8ef;border:2px solid #39a86c;border-radius:16px;padding:20px;text-align:center;margin-bottom:18px">
+<h2 id="titulo-bienvenida" style="color:#13733e"></h2>
+<p>💙 Nos alegra que viajes con Buses VientoSur.</p>
+<p>Tu beneficio estudiantil está activo. ¡Que tengas un excelente viaje!</p>
+</div>
 <div class="resumen">
 <strong>Ruta autorizada</strong>
 <p id="ruta"></p>
@@ -137,6 +142,10 @@ formulario.addEventListener("submit",async function(evento){
     }
 
     pase=datos;
+    const nombreEstudiante=String(datos.nombre||"").trim();
+    const primerNombre=nombreEstudiante.split(/\s+/)[0];
+    document.getElementById("titulo-bienvenida").textContent=
+      primerNombre ? "¡Bienvenido a bordo, "+primerNombre+"! 🎉" : "¡Bienvenido a bordo! 🎉";
     document.getElementById("ruta").textContent=
       datos.origen+" ↔️ "+datos.destino;
     document.getElementById("precio").textContent=

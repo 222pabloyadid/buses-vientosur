@@ -687,6 +687,7 @@ app.post("/api/estudiantes/consultar", async (req, res) => {
 
     return res.json({
       ok: true,
+      nombre: pase.nombre,
       origen: pase.origen,
       destino: pase.destino,
       precio: pase.precio

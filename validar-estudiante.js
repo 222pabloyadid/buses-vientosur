@@ -53,7 +53,7 @@ async function validarEstudiante(supabase, rutIngresado, origen, destino) {
 
   const { data, error } = await supabase
     .from("estudiantes_vientosur")
-    .select("rut,origen,destino,precio_estudiante,vencimiento,estado")
+    .select("rut,nombre,origen,destino,precio_estudiante,vencimiento,estado")
     .eq("rut", rut)
     .maybeSingle();
 
@@ -94,6 +94,7 @@ async function validarEstudiante(supabase, rutIngresado, origen, destino) {
 
   return {
     rut: data.rut,
+    nombre: data.nombre,
     origen: data.origen,
     destino: data.destino,
     precio,
